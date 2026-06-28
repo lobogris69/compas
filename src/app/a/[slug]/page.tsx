@@ -76,12 +76,22 @@ export default function HomeAlumno() {
             <p className="text-sm text-ink-500">Próximas clases</p>
           )}
         </div>
-        <Link
-          href={`/a/${slug}/alumnos`}
-          className="text-sm font-semibold text-brand-600"
-        >
-          Comunidad
-        </Link>
+        <div className="flex flex-col items-end gap-1">
+          <Link
+            href={`/a/${slug}/alumnos`}
+            className="text-sm font-semibold text-brand-600"
+          >
+            Comunidad
+          </Link>
+          {yo && (
+            <Link
+              href={`/a/${slug}/perfil`}
+              className="text-sm font-semibold text-ink-500"
+            >
+              Mi perfil
+            </Link>
+          )}
+        </div>
       </div>
 
       {!yo && (

@@ -66,8 +66,17 @@ export default function Comunidad() {
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {visibles.map((a) => (
           <Card key={a.id} className="flex items-start gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-100 text-base font-bold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
-              {a.nombre.charAt(0).toUpperCase()}
+            <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-100 text-base font-bold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+              {a.fotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={a.fotoUrl}
+                  alt={a.nombre}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                a.nombre.charAt(0).toUpperCase()
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
