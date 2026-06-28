@@ -33,19 +33,33 @@ Registro de lo construido durante el desarrollo autónomo. Estado vivo.
 - **Configuración** (`/a/[slug]/config`): editar reglas del motor de balance
   (tolerancia, antelación, cupo, niveles) y añadir clases.
 
+### Avisos de refuerzo (el gancho) — `src/lib/aviso.ts`
+- Genera el **mensaje de refuerzo** (grupal y directo) listo para enviar.
+- Botón **"Enviar aviso por WhatsApp"** y enlace directo por candidato
+  (enlace `wa.me` con el texto ya escrito).
+
+### Perfil y comunidad
+- **Edición de perfil** del alumno (`/a/[slug]/perfil`): rol, nivel, instagram,
+  bio, visibilidad y **foto** (modo local, dataURL).
+- La foto aparece en el directorio de comunidad.
+
+### Calidad
+- **8 tests** del motor de balance con vitest (`npm test`), todos en verde:
+  equilibrio, reparto de "ambos", déficit, estados, refuerzos y compatibilidad
+  de nivel.
+
 ### Backend (preparado, aún no conectado)
 - Esquema **Supabase multi-tenant + RLS** (`supabase/migrations/0001_init.sql`):
   academias, alumnos, clases, asistencias.
 
 ## 🔜 Siguiente (ideas para continuar)
 - Conectar el modo nube (Supabase) detrás del store, sin tocar componentes.
-- Edición de perfil del alumno (foto real con subida a storage).
-- **Avisos de refuerzo**: simulación del mensaje (texto listo para WhatsApp) y,
-  más adelante, envío real (ver `docs/academia-baile/03-whatsapp.md`).
 - Autenticación real (dueño de academia vs alumno).
 - Branding aplicado (usar el color de la academia en toda su área).
 - Onboarding por pasos (wizard multi-pantalla) y plantillas por estilo.
 - Página pública de la academia (horarios, precios, eventos).
+- Envío real de avisos (API de Meta o no oficial; ver
+  `docs/academia-baile/03-whatsapp.md`).
 
 ## Cómo verlo
 ```bash
