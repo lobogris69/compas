@@ -1,0 +1,236 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useState } from "react";
+import { useStore } from "@/lib/store";
+import { Button, Card, Input, Select } from "@/components/ui";
+import {
+  DIAS_SEMANA,
+  NIVELES,
+  type Nivel,
+  type ReglasBalance,
+} from "@/lib/types";
+
+export default function Config() {
+  const { slug } = useParams<{ slug: string }>();
+  const store = useStore();
+  const academia = store.academiaPorSlug(slug);
+
+  const [reglas, setReglas] = useState<ReglasBalance | null>(
+    academia ? academia.reglas : null,
+  );
+  const [guardado, setGuardado] = useState(false);
+
+  // alta de clase
+  const [cNombre, setCNombre] = useState("");
+  const [cNivel, setCNivel] = useState<Nivel>("medio");
+  const [cEstilo, setCEstilo] = useState("");
+  const [cDia, setCDia] = useState(1);
+  const [cHora, setCHora] = useState("20:00");
+
+  if (store.ready && !academia)
+    return (
+      <main className="mx-auto grid min-h-dvh max-w-md place-items-center px-5 text-center">
+        <Card>
+          <p className="text-3xl">🤔</p>
+          <p className="mt-2 font-semibold">Academia no encontrada</p>
+        </Card>
+      </main>
+    );
+
+  if (!academia || !reglas) return null;
+
+  const clases = store.clasesDe(academia.id);
+
+  function set<K extends keyof ReglasBalance>(k: K, v: ReglasBalance[K]) {
+    setReglas((prev) => (prev ? { ...prev, [k]: v } : prev));
+    setGuardado(false);
+  }
+
+  function guardar() {
+    if (!academia || !reglas) return;
+    store.actualizarAcademia(academia.id, { reglas });
+    setGuardado(true);
+  }
+
+  function anadirClase() {
+    if (!academia) return;
+    if (!cNombre.trim()) return;
+    store.crearClase({
+      academiaId: academia.id,
+      nombre: cNombre.trim(),
+      nivel: cNivel,
+      estilo: cEstilo.trim() || academia.estilos[0] || "Salsa",
+      diaSemana: cDia,
+      hora: cHora,
+      sala: "Sala A",
+      aforo: 24,
+    });
+    setCNombre("");
+    setCEstilo("");
+  }
+
+  return (
+    <main className="mx-auto max-w-xl px-5 py-8">
+      <Link
+        href={`/a/${slug}/panel`}
+        className="text-sm text-ink-500 hover:underline"
+      >
+        ← {academia.nombre}
+      </Link>
+      <h1 className="mt-2 text-2xl font-extrabold">Configuración</h1>
+
+      <Card className="mt-5">
+        <h2 className="font-bold">Reglas de balance</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          Cómo decide Compás cuándo una clase está descompensada.
+        </p>
+        <div className="mt-4 space-y-4">
+          <Range
+            label="Tolerancia de desbalance"
+            sufijo="personas"
+            min={0}
+            max={8}
+            value={reglas.tolerancia}
+            onChange={(v) => set("tolerancia", v)}
+            ayuda="Diferencia leader/follower que se admite antes de avisar."
+          />
+          <Range
+            label="Aviso de refuerzo"
+            sufijo="h antes"
+            min={1}
+            max={24}
+            value={reglas.avisoHorasAntes}
+            onChange={(v) => set("avisoHorasAntes", v)}
+            ayuda="Con cuánta antelación se piden refuerzos."
+          />
+          <Range
+            label="Cupo de refuerzos"
+            sufijo="máx."
+            min={1}
+            max={20}
+            value={reglas.cupoRefuerzos}
+            onChange={(v) => set("cupoRefuerzos", v)}
+            ayuda="Cuántos refuerzos externos se sugieren por clase."
+          />
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={reglas.nivelesCompatibles}
+              onChange={(e) => set("nivelesCompatibles", e.target.checked)}
+              className="h-5 w-5 rounded"
+            />
+            <span className="text-sm">
+              Permitir reforzar con niveles cercanos (±1)
+            </span>
+          </label>
+        </div>
+        <Button onClick={guardar} className="mt-5">
+          {guardado ? "✓ Guardado" : "Guardar reglas"}
+        </Button>
+      </Card>
+
+      <Card className="mt-5">
+        <h2 className="font-bold">Clases ({clases.length})</h2>
+        <ul className="mt-2 divide-y divide-ink-100 dark:divide-ink-800">
+          {clases.map((c) => (
+            <li key={c.id} className="flex justify-between py-2 text-sm">
+              <span className="font-medium">{c.nombre}</span>
+              <span className="text-ink-500">
+                {DIAS_SEMANA[c.diaSemana]} · {c.hora}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-4 rounded-xl bg-ink-50 p-3 dark:bg-ink-900">
+          <p className="mb-2 text-sm font-semibold">Añadir clase</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input
+              label="Nombre"
+              value={cNombre}
+              onChange={(e) => setCNombre(e.target.value)}
+              placeholder="Salsa Avanzado"
+            />
+            <Input
+              label="Estilo"
+              value={cEstilo}
+              onChange={(e) => setCEstilo(e.target.value)}
+              placeholder="Salsa"
+            />
+            <Select
+              label="Nivel"
+              value={cNivel}
+              onChange={(e) => setCNivel(e.target.value as Nivel)}
+            >
+              {NIVELES.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </Select>
+            <Select
+              label="Día"
+              value={cDia}
+              onChange={(e) => setCDia(Number(e.target.value))}
+            >
+              {DIAS_SEMANA.map((d, i) => (
+                <option key={d} value={i}>
+                  {d}
+                </option>
+              ))}
+            </Select>
+            <Input
+              label="Hora"
+              type="time"
+              value={cHora}
+              onChange={(e) => setCHora(e.target.value)}
+            />
+          </div>
+          <Button variant="secondary" onClick={anadirClase} className="mt-3">
+            Añadir clase
+          </Button>
+        </div>
+      </Card>
+    </main>
+  );
+}
+
+function Range({
+  label,
+  sufijo,
+  min,
+  max,
+  value,
+  onChange,
+  ayuda,
+}: {
+  label: string;
+  sufijo: string;
+  min: number;
+  max: number;
+  value: number;
+  onChange: (v: number) => void;
+  ayuda: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">{label}</span>
+        <span className="text-sm font-bold text-brand-600">
+          {value} {sufijo}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="mt-1 w-full accent-brand-600"
+      />
+      <p className="text-xs text-ink-500">{ayuda}</p>
+    </div>
+  );
+}

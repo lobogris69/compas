@@ -24,6 +24,7 @@ import type {
 } from "./types";
 
 const STORAGE_KEY = "compas:data:v1";
+const YO_KEY = "compas:yo:v1"; // identidad ligera del alumno en modo local
 
 interface DB {
   academias: Academia[];
@@ -39,7 +40,11 @@ interface StoreValue {
   db: DB;
   // Academias
   crearAcademia: (a: Omit<Academia, "id" | "createdAt">) => Academia;
+  actualizarAcademia: (id: string, patch: Partial<Academia>) => void;
   academiaPorSlug: (slug: string) => Academia | undefined;
+  // Identidad ligera del alumno (modo local): qué alumno "soy" en cada academia
+  yoEn: (academiaId: string) => string | null;
+  identificarme: (academiaId: string, alumnoId: string) => void;
   // Alumnos
   crearAlumno: (a: Omit<Alumno, "id" | "createdAt">) => Alumno;
   actualizarAlumno: (id: string, patch: Partial<Alumno>) => void;
@@ -76,8 +81,18 @@ function load(): DB {
   }
 }
 
+function loadYo(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(window.localStorage.getItem(YO_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<DB>(VACIO);
+  const [yo, setYo] = useState<Record<string, string>>({});
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -90,6 +105,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     } else {
       setDb(loaded);
     }
+    setYo(loadYo());
     setReady(true);
   }, []);
 
@@ -118,6 +134,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return academia;
     },
     [update],
+  );
+
+  const actualizarAcademia: StoreValue["actualizarAcademia"] = useCallback(
+    (id, patch) => {
+      update((prev) => ({
+        ...prev,
+        academias: prev.academias.map((a) =>
+          a.id === id ? { ...a, ...patch } : a,
+        ),
+      }));
+    },
+    [update],
+  );
+
+  const identificarme: StoreValue["identificarme"] = useCallback(
+    (academiaId, alumnoId) => {
+      setYo((prev) => {
+        const next = { ...prev, [academiaId]: alumnoId };
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(YO_KEY, JSON.stringify(next));
+        }
+        return next;
+      });
+    },
+    [],
   );
 
   const crearAlumno: StoreValue["crearAlumno"] = useCallback(
@@ -202,7 +243,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ready,
       db,
       crearAcademia,
+      actualizarAcademia,
       academiaPorSlug: (slug) => db.academias.find((a) => a.slug === slug),
+      yoEn: (academiaId) => yo[academiaId] ?? null,
+      identificarme,
       crearAlumno,
       actualizarAlumno,
       alumnosDe: (academiaId) =>
@@ -225,7 +269,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [
       ready,
       db,
+      yo,
       crearAcademia,
+      actualizarAcademia,
+      identificarme,
       crearAlumno,
       actualizarAlumno,
       crearClase,

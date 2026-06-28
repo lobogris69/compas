@@ -62,9 +62,12 @@ export default function PanelAcademia() {
             {alumnos.length} alumnos · {clases.length} clases
           </p>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
           <LinkButton href={`/a/${slug}/alumnos`} variant="secondary">
             Alumnos
+          </LinkButton>
+          <LinkButton href={`/a/${slug}/config`} variant="ghost">
+            Ajustes
           </LinkButton>
         </div>
       </div>

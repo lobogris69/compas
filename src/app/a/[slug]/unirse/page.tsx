@@ -46,7 +46,7 @@ export default function Unirse() {
       setError("Pon tu nombre.");
       return;
     }
-    store.crearAlumno({
+    const alumno = store.crearAlumno({
       academiaId: academia.id,
       nombre: nombre.trim(),
       rol,
@@ -59,6 +59,7 @@ export default function Unirse() {
       instagram: instagram.trim() || null,
       visibilidad,
     });
+    store.identificarme(academia.id, alumno.id);
     setHecho(true);
   }
 
@@ -72,12 +73,20 @@ export default function Unirse() {
             Ya formas parte de {academia.nombre}. La academia te avisará cuando
             haya clase o cuando hagan falta refuerzos de tu rol.
           </p>
-          <Link
-            href={`/a/${slug}/alumnos`}
-            className="mt-4 inline-block text-brand-600 underline"
-          >
-            Ver la comunidad
-          </Link>
+          <div className="mt-4 flex flex-col gap-2">
+            <Link
+              href={`/a/${slug}`}
+              className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white"
+            >
+              Ver mis clases
+            </Link>
+            <Link
+              href={`/a/${slug}/alumnos`}
+              className="text-sm text-brand-600 underline"
+            >
+              Ver la comunidad
+            </Link>
+          </div>
         </Card>
       </main>
     );
