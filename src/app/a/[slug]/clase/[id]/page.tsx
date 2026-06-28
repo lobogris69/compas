@@ -12,6 +12,11 @@ import {
 } from "@/lib/balance";
 import { proximaFecha } from "@/lib/demo";
 import { BalanceBar, Button, Card, RolBadge } from "@/components/ui";
+import {
+  enlaceWhatsApp,
+  mensajeRefuerzo,
+  mensajeRefuerzoDirecto,
+} from "@/lib/aviso";
 import { DIAS_SEMANA } from "@/lib/types";
 
 export default function DetalleClase() {
@@ -143,6 +148,21 @@ export default function DetalleClase() {
             Alumnos que pueden venir a equilibrar esta clase. Avísales para que
             confirmen.
           </p>
+          <a
+            href={enlaceWhatsApp(
+              mensajeRefuerzo(
+                academia,
+                clase,
+                balance.faltan.rol,
+                balance.faltan.cantidad,
+              ),
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white"
+          >
+            📣 Enviar aviso por WhatsApp
+          </a>
           <div className="space-y-2">
             {refuerzos.map(({ alumno }) => (
               <Card key={alumno.id} className="flex items-center gap-3 py-3">
@@ -152,6 +172,23 @@ export default function DetalleClase() {
                   <p className="text-xs text-ink-500">nivel {alumno.nivel}</p>
                 </div>
                 <RolBadge rol={alumno.rol} />
+                <a
+                  href={enlaceWhatsApp(
+                    mensajeRefuerzoDirecto(
+                      academia,
+                      clase,
+                      alumno.nombre,
+                      balance.faltan!.rol,
+                    ),
+                    alumno.instagram ?? undefined,
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Avisar por WhatsApp"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#25D366] text-white"
+                >
+                  💬
+                </a>
                 <Button
                   variant="secondary"
                   onClick={() =>
