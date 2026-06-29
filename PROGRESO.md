@@ -48,18 +48,27 @@ Registro de lo construido durante el desarrollo autónomo. Estado vivo.
   equilibrio, reparto de "ambos", déficit, estados, refuerzos y compatibilidad
   de nivel.
 
-### Backend (preparado, aún no conectado)
-- Esquema **Supabase multi-tenant + RLS** (`supabase/migrations/0001_init.sql`):
-  academias, alumnos, clases, asistencias.
+### Permisos y branding
+- **Modelo de propiedad** (modo local): `soyDueno(academiaId)`. La demo te marca
+  como dueño. La **configuración** está gateada solo al dueño; "Ajustes" se
+  oculta a los no-dueños.
+- **Branding por academia**: barra superior con el color de la academia en toda
+  su área (layout de segmento).
+- **Página pública de horarios** (`/a/[slug]/horarios`) para compartir.
+
+### Backend (modo nube — preparado, falta cablear el store)
+- Esquema **Supabase multi-tenant + RLS** (`supabase/migrations/0001_init.sql`).
+- **Adaptador de datos** tipado (`src/lib/remote.ts`): CRUD contra el esquema
+  con mapeo snake_case ↔ camelCase.
+- Guía de conexión en `SUPABASE.md`. Paso pendiente: migrar el store a asíncrono
+  y delegar en `remote.ts` cuando haya credenciales.
 
 ## 🔜 Siguiente (ideas para continuar)
-- Conectar el modo nube (Supabase) detrás del store, sin tocar componentes.
-- Autenticación real (dueño de academia vs alumno).
-- Branding aplicado (usar el color de la academia en toda su área).
+- Cablear el store a `remote.ts` (modo nube) y añadir login (Supabase Auth).
 - Onboarding por pasos (wizard multi-pantalla) y plantillas por estilo.
-- Página pública de la academia (horarios, precios, eventos).
-- Envío real de avisos (API de Meta o no oficial; ver
-  `docs/academia-baile/03-whatsapp.md`).
+- Precios/eventos en la página pública.
+- **Envío real de avisos** (API de Meta o no oficial; requiere credenciales —
+  ver `docs/academia-baile/03-whatsapp.md`).
 
 ## Cómo verlo
 ```bash
