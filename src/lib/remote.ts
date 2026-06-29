@@ -45,6 +45,7 @@ function academiaFromRow(r: Record<string, unknown>): Academia {
     },
     ubicacion: (r.ubicacion as string) ?? "",
     telefono: (r.telefono as string) ?? "",
+    recordatorioPago: (r.recordatorio_pago as string) ?? "",
     logoUrl: (r.logo_url as string | null) ?? null,
     profesores: (r.profesores as Academia["profesores"]) ?? [],
     ownerId: (r.owner as string | null) ?? null,
@@ -70,6 +71,7 @@ function alumnoFromRow(r: Record<string, unknown>): Alumno {
     rol: r.rol as Alumno["rol"],
     nivel: r.nivel as Alumno["nivel"],
     sexo: r.sexo as Alumno["sexo"],
+    telefono: (r.telefono as string) ?? "",
     estilos: (r.estilos as string[]) ?? [],
     fotoUrl: (r.foto_url as string | null) ?? null,
     bio: (r.bio as string) ?? "",
@@ -138,6 +140,7 @@ export async function crearAcademia(
       estilos: a.estilos,
       ubicacion: a.ubicacion,
       telefono: a.telefono,
+      recordatorio_pago: a.recordatorioPago,
       logo_url: a.logoUrl,
       profesores: a.profesores,
       owner: ownerId,
@@ -153,6 +156,17 @@ export async function actualizarReglas(
   const { error } = await db()
     .from("academias")
     .update(reglasToRow(reglas))
+    .eq("id", academiaId);
+  if (error) throw error;
+}
+
+export async function actualizarRecordatorio(
+  academiaId: string,
+  texto: string,
+): Promise<void> {
+  const { error } = await db()
+    .from("academias")
+    .update({ recordatorio_pago: texto })
     .eq("id", academiaId);
   if (error) throw error;
 }
@@ -178,6 +192,7 @@ export async function crearAlumno(a: Alumno): Promise<void> {
       rol: a.rol,
       nivel: a.nivel,
       sexo: a.sexo,
+      telefono: a.telefono,
       estilos: a.estilos,
       foto_url: a.fotoUrl,
       bio: a.bio,
@@ -197,6 +212,7 @@ export async function actualizarAlumno(
   if (patch.rol !== undefined) row.rol = patch.rol;
   if (patch.nivel !== undefined) row.nivel = patch.nivel;
   if (patch.sexo !== undefined) row.sexo = patch.sexo;
+  if (patch.telefono !== undefined) row.telefono = patch.telefono;
   if (patch.estilos !== undefined) row.estilos = patch.estilos;
   if (patch.fotoUrl !== undefined) row.foto_url = patch.fotoUrl;
   if (patch.bio !== undefined) row.bio = patch.bio;

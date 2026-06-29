@@ -137,6 +137,7 @@ export default function NuevaAcademia() {
       logoUrl: logoFinal,
       ubicacion: ubicacion.trim(),
       telefono: telefono.trim(),
+      recordatorioPago: "",
       estilos: estilosFinal,
       profesores: profesores
         .filter((p) => p.nombre.trim())

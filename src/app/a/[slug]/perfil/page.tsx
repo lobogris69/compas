@@ -152,6 +152,14 @@ export default function MiPerfil() {
           </Select>
 
           <Input
+            label="Teléfono"
+            type="tel"
+            value={yo.telefono}
+            onChange={(e) => patch("telefono", e.target.value)}
+            placeholder="600 123 456"
+          />
+
+          <Input
             label="Instagram"
             value={yo.instagram ?? ""}
             onChange={(e) => patch("instagram", e.target.value || null)}

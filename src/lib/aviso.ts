@@ -38,6 +38,19 @@ export function mensajeRefuerzoDirecto(
   );
 }
 
+/** Mensaje de recordatorio de pago para un alumno (usa la plantilla de la academia). */
+export function mensajeRecordatorioPago(
+  academia: Academia,
+  nombre: string,
+): string {
+  const plantilla =
+    academia.recordatorioPago?.trim() ||
+    `¡Hola {nombre}! 👋 Soy ${academia.nombre}. Te recordamos que tienes el pago pendiente. ¡Gracias! 🙏`;
+  return plantilla
+    .replace(/\{nombre\}/g, nombre)
+    .replace(/\{academia\}/g, academia.nombre);
+}
+
 /** Enlace wa.me que abre WhatsApp con el texto ya escrito (elige contacto al vuelo). */
 export function enlaceWhatsApp(texto: string, telefono?: string): string {
   const base = telefono

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Input } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import { enlaceWhatsApp, mensajeRecordatorioPago } from "@/lib/aviso";
 import type { Pago, PlanPago } from "@/lib/types";
 
 const MESES_POR_TIPO: Record<string, number> = {
@@ -48,6 +49,7 @@ export default function Pagos() {
   const store = useStore();
   const academia = store.academiaPorSlug(slug);
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [telEdit, setTelEdit] = useState("");
 
   if (!store.ready) return null;
   if (!academia)
@@ -178,12 +180,27 @@ export default function Pagos() {
                         )}
                       </p>
                     </div>
+                    {est.tipo === "pendiente" && al.telefono && academia && (
+                      <a
+                        href={enlaceWhatsApp(
+                          mensajeRecordatorioPago(academia, al.nombre),
+                          al.telefono,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Recordar por WhatsApp"
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#25D366] text-white"
+                      >
+                        💬
+                      </a>
+                    )}
                     <Button
                       variant="secondary"
                       className="px-3 py-1.5"
-                      onClick={() =>
-                        setAbierto(abiertoEste ? null : al.id)
-                      }
+                      onClick={() => {
+                        setTelEdit(al.telefono);
+                        setAbierto(abiertoEste ? null : al.id);
+                      }}
                     >
                       {abiertoEste ? "Cerrar" : "Registrar pago"}
                     </Button>
@@ -204,6 +221,27 @@ export default function Pagos() {
                             {p.nombre} · {p.importe}€
                           </button>
                         ))}
+                      </div>
+
+                      <div className="mt-3 flex items-end gap-2">
+                        <Input
+                          label="Teléfono (para recordatorios)"
+                          type="tel"
+                          value={telEdit}
+                          onChange={(e) => setTelEdit(e.target.value)}
+                          placeholder="600 123 456"
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="secondary"
+                          onClick={() =>
+                            store.actualizarAlumno(al.id, {
+                              telefono: telEdit.trim(),
+                            })
+                          }
+                        >
+                          Guardar
+                        </Button>
                       </div>
 
                       {historial.length > 0 && (

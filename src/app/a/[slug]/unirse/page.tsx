@@ -25,6 +25,7 @@ export default function Unirse() {
   const [nivel, setNivel] = useState<Nivel>("principiante");
   const [sexo, setSexo] = useState<Sexo>("nd");
   const [bio, setBio] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [instagram, setInstagram] = useState("");
   const [visibilidad, setVisibilidad] = useState<Visibilidad>("academia");
   const [clasesSel, setClasesSel] = useState<string[]>([]);
@@ -62,6 +63,7 @@ export default function Unirse() {
       rol,
       nivel,
       sexo,
+      telefono: telefono.trim(),
       estilos: academia.estilos,
       fotoUrl: null,
       bio: bio.trim(),
@@ -237,6 +239,13 @@ export default function Unirse() {
               <option value="hombre">Hombre</option>
               <option value="otro">Otro</option>
             </Select>
+            <Input
+              label="Teléfono (opcional)"
+              type="tel"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              placeholder="600 123 456"
+            />
             <Input
               label="Instagram (opcional)"
               value={instagram}

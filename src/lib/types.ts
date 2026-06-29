@@ -41,6 +41,8 @@ export interface Academia {
   /** Datos de contacto / perfil público de la academia. */
   ubicacion: string;
   telefono: string;
+  /** Plantilla del mensaje de recordatorio de pago (admite {nombre} y {academia}). */
+  recordatorioPago: string;
   /** Logo (dataURL en local, URL/Storage en nube). Si falta, se usa el emoji. */
   logoUrl: string | null;
   profesores: Profesor[];
@@ -57,6 +59,7 @@ export interface Alumno {
   rol: Rol;
   nivel: Nivel;
   sexo: Sexo;
+  telefono: string;
   estilos: string[];
   // Perfil opcional (opt-in, privacidad primero).
   fotoUrl: string | null;

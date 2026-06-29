@@ -276,8 +276,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (MODE === "supabase" && patch.reglas) {
         encolar(() => remote.actualizarReglas(id, patch.reglas!));
       }
+      if (MODE === "supabase" && patch.recordatorioPago !== undefined) {
+        encolar(() => remote.actualizarRecordatorio(id, patch.recordatorioPago!));
+      }
     },
-    [update],
+    [update, encolar],
   );
 
   const eliminarAcademia: StoreValue["eliminarAcademia"] = useCallback(

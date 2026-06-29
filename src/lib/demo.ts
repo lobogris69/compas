@@ -65,6 +65,7 @@ function alumno(
     rol,
     nivel,
     sexo: "nd",
+    telefono: "",
     estilos: ["Salsa", "Bachata"],
     fotoUrl: null,
     bio: "",
@@ -96,6 +97,8 @@ export function crearDemo(): DemoData {
     reglas: { ...REGLAS_POR_DEFECTO },
     ubicacion: "Calle del Compás 3, Madrid",
     telefono: "600 123 456",
+    recordatorioPago:
+      "¡Hola {nombre}! 👋 Te recordamos que tienes el pago pendiente en {academia}. ¡Gracias! 🙏",
     logoUrl: null,
     profesores: [
       { nombre: "Lucía", estilos: ["Salsa", "Bachata"] },

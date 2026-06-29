@@ -47,6 +47,12 @@ export default function Config() {
   const [pImporte, setPImporte] = useState("");
   const [pClases, setPClases] = useState("");
 
+  // mensaje de recordatorio de pago
+  const [recordatorio, setRecordatorio] = useState(
+    academia?.recordatorioPago ?? "",
+  );
+  const [recGuardado, setRecGuardado] = useState(false);
+
   if (store.ready && !academia)
     return (
       <main className="mx-auto grid min-h-dvh max-w-md place-items-center px-5 text-center">
@@ -382,6 +388,40 @@ export default function Config() {
           </div>
           <Button variant="secondary" onClick={crearPlanLocal} className="mt-3">
             Añadir plan
+          </Button>
+        </div>
+
+        <div className="mt-5">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-ink-700 dark:text-ink-300">
+              Mensaje de recordatorio de pago
+            </span>
+            <textarea
+              value={recordatorio}
+              onChange={(e) => {
+                setRecordatorio(e.target.value);
+                setRecGuardado(false);
+              }}
+              rows={3}
+              className="w-full rounded-xl border border-ink-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-500 dark:border-ink-700 dark:bg-ink-950"
+              placeholder="¡Hola {nombre}! Te recordamos el pago pendiente en {academia}. ¡Gracias!"
+            />
+          </label>
+          <p className="mt-1 text-xs text-ink-500">
+            Usa <b>{"{nombre}"}</b> y <b>{"{academia}"}</b> y se rellenan solos.
+            Se envía desde la pantalla de Pagos, por WhatsApp.
+          </p>
+          <Button
+            variant="secondary"
+            className="mt-2"
+            onClick={() => {
+              store.actualizarAcademia(academia.id, {
+                recordatorioPago: recordatorio,
+              });
+              setRecGuardado(true);
+            }}
+          >
+            {recGuardado ? "✓ Guardado" : "Guardar mensaje"}
           </Button>
         </div>
       </Card>
