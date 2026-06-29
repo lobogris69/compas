@@ -66,9 +66,11 @@ export default function PanelAcademia() {
           <LinkButton href={`/a/${slug}/alumnos`} variant="secondary">
             Alumnos
           </LinkButton>
-          <LinkButton href={`/a/${slug}/config`} variant="ghost">
-            Ajustes
-          </LinkButton>
+          {store.soyDueno(academia.id) && (
+            <LinkButton href={`/a/${slug}/config`} variant="ghost">
+              Ajustes
+            </LinkButton>
+          )}
         </div>
       </div>
 
@@ -97,6 +99,12 @@ export default function PanelAcademia() {
                 {copiado ? "¡Copiado!" : "Copiar"}
               </button>
             </div>
+            <Link
+              href={`/a/${slug}/horarios`}
+              className="mt-2 inline-block text-xs font-semibold text-brand-600"
+            >
+              Ver horario público →
+            </Link>
           </div>
         </div>
       </Card>

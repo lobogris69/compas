@@ -25,6 +25,7 @@ import type {
 
 const STORAGE_KEY = "compas:data:v1";
 const YO_KEY = "compas:yo:v1"; // identidad ligera del alumno en modo local
+const OWNER_KEY = "compas:dueno:v1"; // academias de las que soy dueño (modo local)
 
 interface DB {
   academias: Academia[];
@@ -42,6 +43,8 @@ interface StoreValue {
   crearAcademia: (a: Omit<Academia, "id" | "createdAt">) => Academia;
   actualizarAcademia: (id: string, patch: Partial<Academia>) => void;
   academiaPorSlug: (slug: string) => Academia | undefined;
+  /** ¿Soy el dueño de esta academia? (gestión: panel, ajustes). */
+  soyDueno: (academiaId: string) => boolean;
   // Identidad ligera del alumno (modo local): qué alumno "soy" en cada academia
   yoEn: (academiaId: string) => string | null;
   identificarme: (academiaId: string, alumnoId: string) => void;
@@ -90,21 +93,38 @@ function loadYo(): Record<string, string> {
   }
 }
 
+function loadOwned(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(window.localStorage.getItem(OWNER_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<DB>(VACIO);
   const [yo, setYo] = useState<Record<string, string>>({});
+  const [owned, setOwned] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const loaded = load();
-    // Primera visita: sembramos una academia de demo para que se vea viva.
+    let ownedIds = loadOwned();
+    // Primera visita: sembramos una academia de demo para que se vea viva,
+    // y te marcamos como su dueño para poder probar la gestión.
     if (loaded.academias.length === 0) {
       const demo = crearDemo();
       setDb(demo);
       persist(demo);
+      ownedIds = [...ownedIds, demo.academias[0].id];
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(OWNER_KEY, JSON.stringify(ownedIds));
+      }
     } else {
       setDb(loaded);
     }
+    setOwned(ownedIds);
     setYo(loadYo());
     setReady(true);
   }, []);
@@ -131,6 +151,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       update((prev) => ({ ...prev, academias: [...prev.academias, academia] }));
+      setOwned((prev) => {
+        const next = [...prev, academia.id];
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(OWNER_KEY, JSON.stringify(next));
+        }
+        return next;
+      });
       return academia;
     },
     [update],
@@ -245,6 +272,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       crearAcademia,
       actualizarAcademia,
       academiaPorSlug: (slug) => db.academias.find((a) => a.slug === slug),
+      soyDueno: (academiaId) => owned.includes(academiaId),
       yoEn: (academiaId) => yo[academiaId] ?? null,
       identificarme,
       crearAlumno,
@@ -270,6 +298,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ready,
       db,
       yo,
+      owned,
       crearAcademia,
       actualizarAcademia,
       identificarme,

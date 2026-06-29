@@ -41,6 +41,25 @@ export default function Config() {
 
   if (!academia || !reglas) return null;
 
+  if (!store.soyDueno(academia.id))
+    return (
+      <main className="mx-auto grid min-h-dvh max-w-md place-items-center px-5 text-center">
+        <Card>
+          <p className="text-3xl">🔒</p>
+          <p className="mt-2 font-semibold">Solo el equipo de la academia</p>
+          <p className="mt-1 text-sm text-ink-500">
+            La configuración la gestiona quien creó la academia.
+          </p>
+          <Link
+            href={`/a/${slug}`}
+            className="mt-3 inline-block text-brand-600 underline"
+          >
+            Volver
+          </Link>
+        </Card>
+      </main>
+    );
+
   const clases = store.clasesDe(academia.id);
 
   function set<K extends keyof ReglasBalance>(k: K, v: ReglasBalance[K]) {
