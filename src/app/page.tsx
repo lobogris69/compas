@@ -10,10 +10,7 @@ export default function Landing() {
 
   return (
     <main className="min-h-dvh bg-grid">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5">
-        <span className="text-lg font-extrabold tracking-tight">
-          💃 Compás
-        </span>
+      <header className="mx-auto flex max-w-5xl items-center justify-end px-5 py-5">
         <nav className="flex items-center gap-2">
           {ready && demo && (
             <Link
@@ -23,12 +20,6 @@ export default function Landing() {
               Ver demo
             </Link>
           )}
-          <Link
-            href="/entrar"
-            className="rounded-xl px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800"
-          >
-            Entrar
-          </Link>
           <LinkButton href="/academia/nueva">Crear mi academia</LinkButton>
         </nav>
       </header>
