@@ -6,9 +6,11 @@ import { QRCodeCanvas } from "qrcode.react";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { calcularBalance, estiloEstado } from "@/lib/balance";
+import { cn } from "@/lib/cn";
 import { proximaFecha } from "@/lib/demo";
 import { BalanceBar, Button, Card, Input, LinkButton } from "@/components/ui";
 import { AcademiaAvatar } from "@/components/academia-avatar";
+import { MarcadorClase } from "@/components/marcador-clase";
 import { DIAS_SEMANA, type Academia } from "@/lib/types";
 
 export default function PanelAcademia() {
@@ -16,6 +18,7 @@ export default function PanelAcademia() {
   const store = useStore();
   const academia = store.academiaPorSlug(slug);
   const [copiado, setCopiado] = useState(false);
+  const [claseSelId, setClaseSelId] = useState<string | null>(null);
 
   const enlaceAlumnos =
     typeof window !== "undefined"
@@ -37,7 +40,8 @@ export default function PanelAcademia() {
         .filter(Boolean)
         .map((al) => ({ rol: al!.rol }));
       const balance = calcularBalance(asistentes, academia.reglas.tolerancia);
-      return { clase: c, fecha, balance };
+      const matriculados = store.alumnosDeClase(c.id).length;
+      return { clase: c, fecha, balance, matriculados, confirmados: balance.total };
     });
   }, [academia, clases, alumnos, store]);
 
@@ -47,6 +51,8 @@ export default function PanelAcademia() {
   if (!academia) {
     return <NoEncontrada />;
   }
+
+  const selFila = filas.find((f) => f.clase.id === claseSelId) ?? filas[0];
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-8">
@@ -110,6 +116,42 @@ export default function PanelAcademia() {
           </div>
         </div>
       </Card>
+
+      {selFila && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-bold">Estado de tus clases</h2>
+          {filas.length > 1 && (
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+              {filas.map((f) => {
+                const sel = f.clase.id === selFila.clase.id;
+                const est = estiloEstado(f.balance.estado);
+                return (
+                  <button
+                    key={f.clase.id}
+                    onClick={() => setClaseSelId(f.clase.id)}
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold",
+                      sel
+                        ? "bg-brand-600 text-white"
+                        : "bg-ink-100 text-ink-700 dark:bg-ink-800 dark:text-ink-200",
+                    )}
+                  >
+                    {est.emoji} {f.clase.nombre}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <MarcadorClase
+            nombre={selFila.clase.nombre}
+            subtitulo={`${DIAS_SEMANA[selFila.clase.diaSemana]} · ${selFila.clase.hora} · ${selFila.clase.estilo} · nivel ${selFila.clase.nivel}`}
+            matriculados={selFila.matriculados}
+            confirmados={selFila.confirmados}
+            balance={selFila.balance}
+            hrefDetalle={`/a/${slug}/clase/${selFila.clase.id}`}
+          />
+        </section>
+      )}
 
       <h2 className="mb-3 mt-8 text-lg font-bold">Próximas clases</h2>
       <div className="space-y-3">
