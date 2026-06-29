@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { calcularBalance, estiloEstado } from "@/lib/balance";
 import { proximaFecha } from "@/lib/demo";
-import { BalanceBar, Card, LinkButton } from "@/components/ui";
+import { BalanceBar, Button, Card, Input, LinkButton } from "@/components/ui";
 import { AcademiaAvatar } from "@/components/academia-avatar";
-import { DIAS_SEMANA } from "@/lib/types";
+import { DIAS_SEMANA, type Academia } from "@/lib/types";
 
 export default function PanelAcademia() {
   const { slug } = useParams<{ slug: string }>();
@@ -166,7 +166,72 @@ export default function PanelAcademia() {
           </Card>
         )}
       </div>
+
+      {store.soyDueno(academia.id) && <ZonaPeligro academia={academia} />}
     </main>
+  );
+}
+
+// Zona de peligro: borrar la academia y todos sus datos. Solo el dueño la ve.
+// Pide escribir el nombre exacto para evitar borrados accidentales.
+function ZonaPeligro({ academia }: { academia: Academia }) {
+  const store = useStore();
+  const router = useRouter();
+  const [abierto, setAbierto] = useState(false);
+  const [conf, setConf] = useState("");
+  const puede = conf.trim() === academia.nombre.trim();
+
+  function borrar() {
+    if (!puede) return;
+    store.eliminarAcademia(academia.id);
+    router.push("/");
+  }
+
+  return (
+    <Card className="mt-10 border-rose-300 bg-rose-50/50 dark:border-rose-900/50 dark:bg-rose-950/20">
+      <h2 className="font-bold text-rose-700 dark:text-rose-300">
+        Zona de peligro
+      </h2>
+      <p className="mt-1 text-sm text-ink-600 dark:text-ink-400">
+        Borra esta academia y <b>todos</b> sus datos (clases, alumnos,
+        asistencias y vídeos). No se puede deshacer.
+      </p>
+      {!abierto ? (
+        <Button
+          variant="danger"
+          className="mt-3"
+          onClick={() => setAbierto(true)}
+        >
+          Borrar esta academia
+        </Button>
+      ) : (
+        <div className="mt-3 space-y-2">
+          <p className="text-sm">
+            Para confirmar, escribe el nombre exacto:{" "}
+            <b>{academia.nombre}</b>
+          </p>
+          <Input
+            value={conf}
+            onChange={(e) => setConf(e.target.value)}
+            placeholder={academia.nombre}
+          />
+          <div className="flex gap-2">
+            <Button variant="danger" disabled={!puede} onClick={borrar}>
+              Borrar definitivamente
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setAbierto(false);
+                setConf("");
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }
 

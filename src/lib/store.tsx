@@ -75,6 +75,8 @@ interface StoreValue {
   // Academias
   crearAcademia: (a: Omit<Academia, "id" | "createdAt">) => Academia;
   actualizarAcademia: (id: string, patch: Partial<Academia>) => void;
+  /** Borra la academia y todos sus datos (clases, alumnos, asistencias, vídeos). */
+  eliminarAcademia: (id: string) => void;
   academiaPorSlug: (slug: string) => Academia | undefined;
   /** ¿Soy el dueño de esta academia? (gestión: panel, ajustes). */
   soyDueno: (academiaId: string) => boolean;
@@ -244,6 +246,39 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [update],
+  );
+
+  const eliminarAcademia: StoreValue["eliminarAcademia"] = useCallback(
+    (id) => {
+      // Quita la academia y todos sus datos de memoria.
+      update((prev) => ({
+        academias: prev.academias.filter((a) => a.id !== id),
+        clases: prev.clases.filter((c) => c.academiaId !== id),
+        alumnos: prev.alumnos.filter((a) => a.academiaId !== id),
+        asistencias: prev.asistencias.filter((a) => a.academiaId !== id),
+        videos: prev.videos.filter((v) => v.academiaId !== id),
+      }));
+      // Limpia propiedad e identidad ligera de esa academia.
+      setOwned((prev) => {
+        const next = prev.filter((x) => x !== id);
+        if (MODE === "local" && typeof window !== "undefined") {
+          window.localStorage.setItem(OWNER_KEY, JSON.stringify(next));
+        }
+        return next;
+      });
+      setYo((prev) => {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(YO_KEY, JSON.stringify(next));
+        }
+        return next;
+      });
+      // La BD borra en cascada los hijos; aquí solo la academia.
+      if (MODE === "supabase") encolar(() => remote.eliminarAcademia(id));
+    },
+    [update, encolar],
   );
 
   const identificarme: StoreValue["identificarme"] = useCallback(
@@ -439,6 +474,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       cargandoAcademia: (slug) => cargando.includes(slug),
       crearAcademia,
       actualizarAcademia,
+      eliminarAcademia,
       academiaPorSlug: (slug) => db.academias.find((a) => a.slug === slug),
       soyDueno: (academiaId) => owned.includes(academiaId),
       yoEn: (academiaId) => yo[academiaId] ?? null,
@@ -479,6 +515,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       cargarAcademia,
       crearAcademia,
       actualizarAcademia,
+      eliminarAcademia,
       identificarme,
       crearAlumno,
       actualizarAlumno,

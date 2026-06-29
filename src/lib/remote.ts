@@ -251,6 +251,13 @@ export async function eliminarAlumno(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// Borra la academia. La BD elimina en cascada clases, alumnos, asistencias y
+// vídeos (on delete cascade). RLS exige ser el dueño.
+export async function eliminarAcademia(id: string): Promise<void> {
+  const { error } = await db().from("academias").delete().eq("id", id);
+  if (error) throw error;
+}
+
 // ───────────────────────── Vídeos ─────────────────────────
 
 function videoFromRow(r: Record<string, unknown>): Video {
