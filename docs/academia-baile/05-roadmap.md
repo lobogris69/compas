@@ -7,11 +7,11 @@
 >
 > | Fase | Qué | Estado |
 > |---|---|---|
-> | **1** | **Matrícula** alumno↔clases (multi-clase; editable por alumno y por profe/dueño). El alumno elige sus clases; día/hora/nombre/modalidad vienen de la clase. Habilita "nº de alumnos de la clase". | 🔨 en curso |
-> | **2** | **Resumen súper-visual** por clase: matriculados · confirmados · 🔵 leaders · 🩷 followers · barra de equilibrio · estado + acceso a refuerzos. | ⏳ |
-> | **3** | **Acceso de profesores**: el dueño invita por email; vista reducida (subir vídeos + ver estado de clases). | ⏳ |
-> | **4** | **`/admin` de plataforma** (gateado por el email del fundador): ver todas las academias y sus números; suspender/borrar. | ⏳ |
-> | **5** | **Pagos**: control de pago por alumno y periodo + **recordatorios configurables** (fechas y mensajes, por clase o todas, vía WhatsApp). Módulo grande, aparte. | ⏳ |
+> | **1** | **Matrícula** alumno↔clases (multi-clase; editable por alumno y por profe/dueño). | ✅ hecho |
+> | **2** | **Resumen súper-visual** por clase: matriculados · confirmados · leaders · followers · equilibrio + refuerzos. | ✅ hecho |
+> | **3** | **Acceso de profesores**: el dueño invita por email; vista reducida (subir vídeos + ver estado). | ✅ hecho |
+> | **4** | **`/admin` de plataforma** (email del fundador): todas las academias y sus números. | ✅ hecho (solo lectura; suspender/borrar pendiente) |
+> | **5** | **Pagos**: planes configurables (mensual/trimestral/semestral/anual/bono) + control al día/pendiente + recordatorios WhatsApp manuales. | ✅ hecho (envío automático programado: pendiente, necesita API WhatsApp) |
 >
 > El motor de balance/refuerzos (déficit, nivel compatible, aviso WhatsApp, "Apuntar")
 > ya está implementado en `src/lib/balance.ts` y la pantalla de clase.
