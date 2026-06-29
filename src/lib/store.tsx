@@ -10,6 +10,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { crearDemo } from "./demo";
@@ -194,6 +195,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Cola de escrituras remotas (modo nube). Serializa los writes a Supabase en
+  // el orden en que se piden, para que la academia padre exista antes que sus
+  // hijos (clases, alumnos, vídeos, asistencias) y no se viole la clave foránea.
+  // Cada write registra sus propios errores y nunca bloquea a los siguientes.
+  const colaRemota = useRef<Promise<unknown>>(Promise.resolve());
+  const encolar = useCallback((fn: () => Promise<unknown>) => {
+    const run = () => fn().catch(console.error);
+    colaRemota.current = colaRemota.current.then(run, run);
+    return colaRemota.current;
+  }, []);
+
   const crearAcademia: StoreValue["crearAcademia"] = useCallback(
     (input) => {
       const ownerId = MODE === "supabase" ? auth.user?.id ?? null : null;
@@ -212,7 +224,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return next;
       });
       if (MODE === "supabase" && ownerId) {
-        remote.crearAcademia(academia, ownerId).catch(console.error);
+        encolar(() => remote.crearAcademia(academia, ownerId));
       }
       return academia;
     },
@@ -228,7 +240,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ),
       }));
       if (MODE === "supabase" && patch.reglas) {
-        remote.actualizarReglas(id, patch.reglas).catch(console.error);
+        encolar(() => remote.actualizarReglas(id, patch.reglas!));
       }
     },
     [update],
@@ -255,7 +267,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       update((prev) => ({ ...prev, alumnos: [...prev.alumnos, alumno] }));
-      if (MODE === "supabase") remote.crearAlumno(alumno).catch(console.error);
+      if (MODE === "supabase") encolar(() => remote.crearAlumno(alumno));
       return alumno;
     },
     [update],
@@ -267,8 +279,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         alumnos: prev.alumnos.map((a) => (a.id === id ? { ...a, ...patch } : a)),
       }));
-      if (MODE === "supabase")
-        remote.actualizarAlumno(id, patch).catch(console.error);
+      if (MODE === "supabase") encolar(() => remote.actualizarAlumno(id, patch));
     },
     [update],
   );
@@ -281,7 +292,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         // limpia sus respuestas de asistencia
         asistencias: prev.asistencias.filter((a) => a.alumnoId !== id),
       }));
-      if (MODE === "supabase") remote.eliminarAlumno(id).catch(console.error);
+      if (MODE === "supabase") encolar(() => remote.eliminarAlumno(id));
     },
     [update],
   );
@@ -294,7 +305,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       update((prev) => ({ ...prev, videos: [...prev.videos, video] }));
-      if (MODE === "supabase") remote.crearVideo(video).catch(console.error);
+      if (MODE === "supabase") encolar(() => remote.crearVideo(video));
       return video;
     },
     [update],
@@ -306,8 +317,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         videos: prev.videos.map((v) => (v.id === id ? { ...v, ...patch } : v)),
       }));
-      if (MODE === "supabase")
-        remote.actualizarVideo(id, patch).catch(console.error);
+      if (MODE === "supabase") encolar(() => remote.actualizarVideo(id, patch));
     },
     [update],
   );
@@ -318,7 +328,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         videos: prev.videos.filter((v) => v.id !== id),
       }));
-      if (MODE === "supabase") remote.eliminarVideo(id).catch(console.error);
+      if (MODE === "supabase") encolar(() => remote.eliminarVideo(id));
     },
     [update],
   );
@@ -331,7 +341,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       update((prev) => ({ ...prev, clases: [...prev.clases, clase] }));
-      if (MODE === "supabase") remote.crearClase(clase).catch(console.error);
+      if (MODE === "supabase") encolar(() => remote.crearClase(clase));
       return clase;
     },
     [update],
@@ -339,7 +349,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const responder: StoreValue["responder"] = useCallback(
     (input) => {
-      if (MODE === "supabase") remote.responder(input).catch(console.error);
+      if (MODE === "supabase") encolar(() => remote.responder(input));
       update((prev) => {
         const existe = prev.asistencias.find(
           (a) =>
