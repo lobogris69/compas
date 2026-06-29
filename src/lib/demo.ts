@@ -9,6 +9,8 @@ import {
   type Clase,
   type Matricula,
   type Miembro,
+  type Pago,
+  type PlanPago,
   REGLAS_POR_DEFECTO,
   type Rol,
   type Video,
@@ -22,6 +24,8 @@ export interface DemoData {
   videos: Video[];
   matriculas: Matricula[];
   miembros: Miembro[];
+  planes: PlanPago[];
+  pagos: Pago[];
 }
 
 const NOMBRES_LEADER = [
@@ -226,6 +230,29 @@ export function crearDemo(): DemoData {
     ...NOMBRES_FOLLOWER.slice(4),
   ]);
 
+  const planes: PlanPago[] = [
+    {
+      id: newId(),
+      academiaId,
+      nombre: "Cuota mensual",
+      tipo: "mensual",
+      importe: 40,
+      clases: null,
+      activo: true,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: newId(),
+      academiaId,
+      nombre: "Bono 10 clases",
+      tipo: "bono",
+      importe: 70,
+      clases: 10,
+      activo: true,
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
   return {
     academias: [academia],
     alumnos,
@@ -234,5 +261,7 @@ export function crearDemo(): DemoData {
     videos,
     matriculas,
     miembros: [],
+    planes,
+    pagos: [],
   };
 }

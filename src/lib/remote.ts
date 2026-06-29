@@ -14,6 +14,8 @@ import type {
   EstadoAsistencia,
   Matricula,
   Miembro,
+  Pago,
+  PlanPago,
   ReglasBalance,
   Video,
 } from "./types";
@@ -414,6 +416,99 @@ export async function crearMiembro(m: Miembro): Promise<void> {
 
 export async function eliminarMiembro(id: string): Promise<void> {
   const { error } = await db().from("miembros").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ───────────────────────── Planes de pago ─────────────────────────
+
+function planFromRow(r: Record<string, unknown>): PlanPago {
+  return {
+    id: r.id as string,
+    academiaId: r.academia_id as string,
+    nombre: r.nombre as string,
+    tipo: r.tipo as PlanPago["tipo"],
+    importe: Number(r.importe ?? 0),
+    clases: (r.clases as number | null) ?? null,
+    activo: (r.activo as boolean) ?? true,
+    createdAt: r.created_at as string,
+  };
+}
+
+export async function planesDe(academiaId: string): Promise<PlanPago[]> {
+  const { data, error } = await db()
+    .from("planes_pago")
+    .select("*")
+    .eq("academia_id", academiaId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(planFromRow);
+}
+
+export async function crearPlan(p: PlanPago): Promise<void> {
+  const { error } = await db().from("planes_pago").insert({
+    id: p.id,
+    academia_id: p.academiaId,
+    nombre: p.nombre,
+    tipo: p.tipo,
+    importe: p.importe,
+    clases: p.clases,
+    activo: p.activo,
+  });
+  if (error) throw error;
+}
+
+export async function eliminarPlan(id: string): Promise<void> {
+  const { error } = await db().from("planes_pago").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ───────────────────────── Pagos ─────────────────────────
+
+function pagoFromRow(r: Record<string, unknown>): Pago {
+  return {
+    id: r.id as string,
+    academiaId: r.academia_id as string,
+    alumnoId: r.alumno_id as string,
+    planId: (r.plan_id as string | null) ?? null,
+    concepto: (r.concepto as string) ?? "",
+    tipo: r.tipo as Pago["tipo"],
+    importe: Number(r.importe ?? 0),
+    fechaPago: r.fecha_pago as string,
+    cubreDesde: (r.cubre_desde as string | null) ?? null,
+    cubreHasta: (r.cubre_hasta as string | null) ?? null,
+    clases: (r.clases as number | null) ?? null,
+    createdAt: r.created_at as string,
+  };
+}
+
+export async function pagosDe(academiaId: string): Promise<Pago[]> {
+  const { data, error } = await db()
+    .from("pagos")
+    .select("*")
+    .eq("academia_id", academiaId);
+  if (error) throw error;
+  return (data ?? []).map(pagoFromRow);
+}
+
+export async function crearPago(p: Pago): Promise<void> {
+  const { error } = await db().from("pagos").insert({
+    id: p.id,
+    academia_id: p.academiaId,
+    alumno_id: p.alumnoId,
+    plan_id: p.planId,
+    concepto: p.concepto,
+    tipo: p.tipo,
+    importe: p.importe,
+    fecha_pago: p.fechaPago,
+    cubre_desde: p.cubreDesde,
+    cubre_hasta: p.cubreHasta,
+    clases: p.clases,
+  });
+  if (error) throw error;
+}
+
+export async function eliminarPago(id: string): Promise<void> {
+  const { error } = await db().from("pagos").delete().eq("id", id);
   if (error) throw error;
 }
 

@@ -26,6 +26,8 @@ import type {
   EstadoAsistencia,
   Matricula,
   Miembro,
+  Pago,
+  PlanPago,
   Rol,
   Video,
 } from "./types";
@@ -42,6 +44,8 @@ interface DB {
   videos: Video[];
   matriculas: Matricula[];
   miembros: Miembro[];
+  planes: PlanPago[];
+  pagos: Pago[];
 }
 
 const VACIO: DB = {
@@ -52,6 +56,8 @@ const VACIO: DB = {
   videos: [],
   matriculas: [],
   miembros: [],
+  planes: [],
+  pagos: [],
 };
 
 /** Inserta/actualiza por id (para hidratar desde la nube sin duplicar). */
@@ -94,6 +100,13 @@ interface StoreValue {
   invitarMiembro: (academiaId: string, email: string) => void;
   quitarMiembro: (id: string) => void;
   miembrosDe: (academiaId: string) => Miembro[];
+  // Pagos: planes (modalidades) y pagos registrados
+  crearPlan: (p: Omit<PlanPago, "id" | "createdAt">) => PlanPago;
+  eliminarPlan: (id: string) => void;
+  planesDe: (academiaId: string) => PlanPago[];
+  registrarPago: (p: Omit<Pago, "id" | "createdAt">) => Pago;
+  eliminarPago: (id: string) => void;
+  pagosDe: (academiaId: string) => Pago[];
   // Identidad ligera del alumno (modo local): qué alumno "soy" en cada academia
   yoEn: (academiaId: string) => string | null;
   identificarme: (academiaId: string, alumnoId: string) => void;
@@ -278,6 +291,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         videos: prev.videos.filter((v) => v.academiaId !== id),
         matriculas: prev.matriculas.filter((m) => m.academiaId !== id),
         miembros: prev.miembros.filter((m) => m.academiaId !== id),
+        planes: prev.planes.filter((p) => p.academiaId !== id),
+        pagos: prev.pagos.filter((p) => p.academiaId !== id),
       }));
       // Limpia propiedad e identidad ligera de esa academia.
       setOwned((prev) => {
@@ -492,6 +507,56 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [update, encolar],
   );
 
+  const crearPlan: StoreValue["crearPlan"] = useCallback(
+    (input) => {
+      const plan: PlanPago = {
+        ...input,
+        id: newId(),
+        createdAt: new Date().toISOString(),
+      };
+      update((prev) => ({ ...prev, planes: [...prev.planes, plan] }));
+      if (MODE === "supabase") encolar(() => remote.crearPlan(plan));
+      return plan;
+    },
+    [update, encolar],
+  );
+
+  const eliminarPlan: StoreValue["eliminarPlan"] = useCallback(
+    (id) => {
+      update((prev) => ({
+        ...prev,
+        planes: prev.planes.filter((p) => p.id !== id),
+      }));
+      if (MODE === "supabase") encolar(() => remote.eliminarPlan(id));
+    },
+    [update, encolar],
+  );
+
+  const registrarPago: StoreValue["registrarPago"] = useCallback(
+    (input) => {
+      const pago: Pago = {
+        ...input,
+        id: newId(),
+        createdAt: new Date().toISOString(),
+      };
+      update((prev) => ({ ...prev, pagos: [...prev.pagos, pago] }));
+      if (MODE === "supabase") encolar(() => remote.crearPago(pago));
+      return pago;
+    },
+    [update, encolar],
+  );
+
+  const eliminarPago: StoreValue["eliminarPago"] = useCallback(
+    (id) => {
+      update((prev) => ({
+        ...prev,
+        pagos: prev.pagos.filter((p) => p.id !== id),
+      }));
+      if (MODE === "supabase") encolar(() => remote.eliminarPago(id));
+    },
+    [update, encolar],
+  );
+
   const responder: StoreValue["responder"] = useCallback(
     (input) => {
       if (MODE === "supabase") encolar(() => remote.responder(input));
@@ -543,15 +608,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const ac = await remote.academiaPorSlug(slug);
         if (ac) {
-          const [alumnos, clases, videos, asistencias, matriculas, miembros] =
-            await Promise.all([
-              remote.alumnosDe(ac.id),
-              remote.clasesDe(ac.id),
-              remote.videosDe(ac.id),
-              remote.asistenciasDeAcademia(ac.id),
-              remote.matriculasDe(ac.id),
-              remote.miembrosDe(ac.id),
-            ]);
+          const [
+            alumnos,
+            clases,
+            videos,
+            asistencias,
+            matriculas,
+            miembros,
+            planes,
+            pagos,
+          ] = await Promise.all([
+            remote.alumnosDe(ac.id),
+            remote.clasesDe(ac.id),
+            remote.videosDe(ac.id),
+            remote.asistenciasDeAcademia(ac.id),
+            remote.matriculasDe(ac.id),
+            remote.miembrosDe(ac.id),
+            remote.planesDe(ac.id),
+            remote.pagosDe(ac.id),
+          ]);
           setDb((prev) => ({
             academias: upsertById(prev.academias, [ac]),
             alumnos: reemplazarPorAcademia(prev.alumnos, ac.id, alumnos),
@@ -568,6 +643,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               matriculas,
             ),
             miembros: reemplazarPorAcademia(prev.miembros, ac.id, miembros),
+            planes: reemplazarPorAcademia(prev.planes, ac.id, planes),
+            pagos: reemplazarPorAcademia(prev.pagos, ac.id, pagos),
           }));
           if (ac.ownerId && auth.user && ac.ownerId === auth.user.id) {
             setOwned((prev) =>
@@ -617,6 +694,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       quitarMiembro,
       miembrosDe: (academiaId) =>
         db.miembros.filter((m) => m.academiaId === academiaId),
+      crearPlan,
+      eliminarPlan,
+      planesDe: (academiaId) =>
+        db.planes.filter((p) => p.academiaId === academiaId),
+      registrarPago,
+      eliminarPago,
+      pagosDe: (academiaId) =>
+        db.pagos.filter((p) => p.academiaId === academiaId),
       yoEn: (academiaId) => yo[academiaId] ?? null,
       identificarme,
       crearAlumno,
@@ -686,6 +771,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       desmatricular,
       invitarMiembro,
       quitarMiembro,
+      crearPlan,
+      eliminarPlan,
+      registrarPago,
+      eliminarPago,
       responder,
       update,
       auth.user,

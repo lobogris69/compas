@@ -10,7 +10,16 @@ import {
   NIVELES,
   type Nivel,
   type ReglasBalance,
+  type TipoPlan,
 } from "@/lib/types";
+
+const TIPOS_PLAN: { v: TipoPlan; label: string }[] = [
+  { v: "mensual", label: "Mensual" },
+  { v: "trimestral", label: "Trimestral" },
+  { v: "semestral", label: "Semestral" },
+  { v: "anual", label: "Anual" },
+  { v: "bono", label: "Bono (por clases)" },
+];
 
 export default function Config() {
   const { slug } = useParams<{ slug: string }>();
@@ -31,6 +40,12 @@ export default function Config() {
 
   // acceso de profesores
   const [emailProf, setEmailProf] = useState("");
+
+  // planes de pago
+  const [pNombre, setPNombre] = useState("");
+  const [pTipo, setPTipo] = useState<TipoPlan>("mensual");
+  const [pImporte, setPImporte] = useState("");
+  const [pClases, setPClases] = useState("");
 
   if (store.ready && !academia)
     return (
@@ -65,6 +80,23 @@ export default function Config() {
 
   const clases = store.clasesDe(academia.id);
   const miembros = store.miembrosDe(academia.id);
+  const planes = store.planesDe(academia.id);
+
+  function crearPlanLocal() {
+    if (!academia) return;
+    if (!pNombre.trim()) return;
+    store.crearPlan({
+      academiaId: academia.id,
+      nombre: pNombre.trim(),
+      tipo: pTipo,
+      importe: Number(pImporte) || 0,
+      clases: pTipo === "bono" ? Number(pClases) || null : null,
+      activo: true,
+    });
+    setPNombre("");
+    setPImporte("");
+    setPClases("");
+  }
 
   function set<K extends keyof ReglasBalance>(k: K, v: ReglasBalance[K]) {
     setReglas((prev) => (prev ? { ...prev, [k]: v } : prev));
@@ -275,6 +307,83 @@ export default function Config() {
         <p className="mt-2 text-xs text-ink-500">
           El profe debe registrarse en Compás con ese mismo email para acceder.
         </p>
+      </Card>
+
+      <Card className="mt-5">
+        <h2 className="font-bold">Planes de pago ({planes.length})</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          Define tus modalidades (mensual, trimestral, semestral, anual o
+          bonos). Luego registras los pagos de tus alumnos contra estos planes.
+        </p>
+
+        {planes.length > 0 && (
+          <ul className="mt-3 divide-y divide-ink-100 dark:divide-ink-800">
+            {planes.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center justify-between py-2 text-sm"
+              >
+                <span className="min-w-0">
+                  <span className="font-medium">{p.nombre}</span>{" "}
+                  <span className="text-ink-500">
+                    · {TIPOS_PLAN.find((t) => t.v === p.tipo)?.label}
+                    {p.tipo === "bono" && p.clases ? ` (${p.clases} clases)` : ""}
+                    {" · "}
+                    {p.importe} €
+                  </span>
+                </span>
+                <button
+                  onClick={() => store.eliminarPlan(p.id)}
+                  className="shrink-0 text-rose-600 hover:underline"
+                >
+                  Quitar
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-4 rounded-xl bg-ink-50 p-3 dark:bg-ink-900">
+          <p className="mb-2 text-sm font-semibold">Añadir plan</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input
+              label="Nombre"
+              value={pNombre}
+              onChange={(e) => setPNombre(e.target.value)}
+              placeholder="Cuota mensual"
+            />
+            <Select
+              label="Tipo"
+              value={pTipo}
+              onChange={(e) => setPTipo(e.target.value as TipoPlan)}
+            >
+              {TIPOS_PLAN.map((t) => (
+                <option key={t.v} value={t.v}>
+                  {t.label}
+                </option>
+              ))}
+            </Select>
+            <Input
+              label="Importe (€)"
+              type="number"
+              value={pImporte}
+              onChange={(e) => setPImporte(e.target.value)}
+              placeholder="40"
+            />
+            {pTipo === "bono" && (
+              <Input
+                label="Nº de clases del bono"
+                type="number"
+                value={pClases}
+                onChange={(e) => setPClases(e.target.value)}
+                placeholder="10"
+              />
+            )}
+          </div>
+          <Button variant="secondary" onClick={crearPlanLocal} className="mt-3">
+            Añadir plan
+          </Button>
+        </div>
       </Card>
     </main>
   );

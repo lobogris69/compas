@@ -106,6 +106,42 @@ export interface Miembro {
   createdAt: string;
 }
 
+/** Tipo de plan de cobro que ofrece una academia. */
+export type TipoPlan =
+  | "mensual"
+  | "trimestral"
+  | "semestral"
+  | "anual"
+  | "bono";
+
+/** Plan de cobro (modalidad) que define una academia. */
+export interface PlanPago {
+  id: string;
+  academiaId: string;
+  nombre: string;
+  tipo: TipoPlan;
+  importe: number;
+  clases: number | null; // solo bonos
+  activo: boolean;
+  createdAt: string;
+}
+
+/** Pago registrado de un alumno contra un plan. */
+export interface Pago {
+  id: string;
+  academiaId: string;
+  alumnoId: string;
+  planId: string | null;
+  concepto: string;
+  tipo: TipoPlan;
+  importe: number;
+  fechaPago: string; // ISO yyyy-mm-dd
+  cubreDesde: string | null;
+  cubreHasta: string | null;
+  clases: number | null; // solo bonos
+  createdAt: string;
+}
+
 /** Matrícula: vincula un alumno con una clase de su academia (puede tener varias). */
 export interface Matricula {
   id: string;
