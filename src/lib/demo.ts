@@ -7,6 +7,7 @@ import {
   type Alumno,
   type Asistencia,
   type Clase,
+  type Matricula,
   REGLAS_POR_DEFECTO,
   type Rol,
   type Video,
@@ -18,6 +19,7 @@ export interface DemoData {
   clases: Clase[];
   asistencias: Asistencia[];
   videos: Video[];
+  matriculas: Matricula[];
 }
 
 const NOMBRES_LEADER = [
@@ -193,5 +195,34 @@ export function crearDemo(): DemoData {
     ),
   ];
 
-  return { academias: [academia], alumnos, clases, asistencias, videos };
+  // Matrículas: el roster de cada clase (mayor que quienes confirman, para que
+  // se vea "vienen X de Y").
+  const matricula = (claseId: string, alumnoId: string): Matricula => ({
+    id: newId(),
+    academiaId,
+    claseId,
+    alumnoId,
+    createdAt: new Date().toISOString(),
+  });
+  const matriculas: Matricula[] = [];
+  const enrolar = (claseId: string, nombres: string[]) => {
+    for (const n of nombres) {
+      const al = alumnos.find((a) => a.nombre === n);
+      if (al) matriculas.push(matricula(claseId, al.id));
+    }
+  };
+  // Salsa intermedio: 15 matriculados (de ellos, 12 confirman arriba).
+  enrolar(claseSalsa.id, [
+    ...NOMBRES_LEADER.slice(0, 8),
+    ...NOMBRES_FOLLOWER.slice(0, 5),
+    "Alex",
+    "Sam",
+  ]);
+  // Bachata principiantes: los de nivel principiante.
+  enrolar(clases[1].id, [
+    ...NOMBRES_LEADER.slice(6),
+    ...NOMBRES_FOLLOWER.slice(4),
+  ]);
+
+  return { academias: [academia], alumnos, clases, asistencias, videos, matriculas };
 }

@@ -1,5 +1,25 @@
 # 05 — Roadmap por fases
 
+> **Roadmap de construcción vigente (jun 2026).** La app ya está en modo real
+> (Supabase: auth, CRUD, RLS, Storage de logos y vídeos). Roles definidos como
+> capas acumulativas: 🛡️ Plataforma ⊃ 🏫 Dueño ⊃ 🧑‍🏫 Profesor ⊃ 🧑‍🎓 Alumno
+> (el dueño suele ser también profesor; puede ser dueño-profesor único).
+>
+> | Fase | Qué | Estado |
+> |---|---|---|
+> | **1** | **Matrícula** alumno↔clases (multi-clase; editable por alumno y por profe/dueño). El alumno elige sus clases; día/hora/nombre/modalidad vienen de la clase. Habilita "nº de alumnos de la clase". | 🔨 en curso |
+> | **2** | **Resumen súper-visual** por clase: matriculados · confirmados · 🔵 leaders · 🩷 followers · barra de equilibrio · estado + acceso a refuerzos. | ⏳ |
+> | **3** | **Acceso de profesores**: el dueño invita por email; vista reducida (subir vídeos + ver estado de clases). | ⏳ |
+> | **4** | **`/admin` de plataforma** (gateado por el email del fundador): ver todas las academias y sus números; suspender/borrar. | ⏳ |
+> | **5** | **Pagos**: control de pago por alumno y periodo + **recordatorios configurables** (fechas y mensajes, por clase o todas, vía WhatsApp). Módulo grande, aparte. | ⏳ |
+>
+> El motor de balance/refuerzos (déficit, nivel compatible, aviso WhatsApp, "Apuntar")
+> ya está implementado en `src/lib/balance.ts` y la pantalla de clase.
+
+---
+
+## Roadmap estratégico original
+
 Orden recomendado de construcción. Todo en **estudio**; nada comprometido aún.
 
 | Fase | Qué entrega | Por qué en este orden |

@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
+  DIAS_SEMANA,
   NIVELES,
   type Nivel,
   type Rol,
@@ -58,6 +59,19 @@ export default function MiPerfil() {
   }
 
   const roles: Rol[] = ["leader", "follower", "ambos"];
+  const todasClases = store.clasesDe(academia.id);
+  const misClaseIds = new Set(store.clasesDeAlumno(yo.id).map((c) => c.id));
+
+  function toggleMiClase(claseId: string) {
+    if (!academia || !yo) return;
+    if (misClaseIds.has(claseId)) {
+      store.desmatricular(yo.id, claseId);
+    } else {
+      store.matricular(academia.id, yo.id, claseId);
+    }
+    setGuardado(true);
+    setTimeout(() => setGuardado(false), 1200);
+  }
 
   return (
     <main className="mx-auto max-w-md px-5 py-8">
@@ -164,6 +178,52 @@ export default function MiPerfil() {
             <option value="privado">Solo yo (privado)</option>
           </Select>
         </Card>
+
+        {todasClases.length > 0 && (
+          <Card className="space-y-2">
+            <div>
+              <p className="font-bold">Mis clases</p>
+              <p className="text-xs text-ink-500">
+                Marca a las que vas. Puedes ir a varias.
+              </p>
+            </div>
+            {todasClases.map((c) => {
+              const sel = misClaseIds.has(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggleMiClase(c.id)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left",
+                    sel
+                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/30"
+                      : "border-ink-200 dark:border-ink-700",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid h-5 w-5 shrink-0 place-items-center rounded-md border text-xs text-white",
+                      sel
+                        ? "border-brand-600 bg-brand-600"
+                        : "border-ink-300 dark:border-ink-600",
+                    )}
+                  >
+                    {sel ? "✓" : ""}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold">
+                      {c.nombre}
+                    </span>
+                    <span className="block text-xs text-ink-500">
+                      {DIAS_SEMANA[c.diaSemana]} · {c.hora} · {c.estilo}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </Card>
+        )}
 
         <p className="text-center text-sm text-emerald-600">
           {guardado ? "✓ Guardado" : " "}

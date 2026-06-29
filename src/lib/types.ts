@@ -94,6 +94,15 @@ export interface Asistencia {
   updatedAt: string;
 }
 
+/** Matrícula: vincula un alumno con una clase de su academia (puede tener varias). */
+export interface Matricula {
+  id: string;
+  academiaId: string;
+  claseId: string;
+  alumnoId: string;
+  createdAt: string;
+}
+
 /** Vídeo de la academia (clase, figura, evento, actuación…). */
 export interface Video {
   id: string;

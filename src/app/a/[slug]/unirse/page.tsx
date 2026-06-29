@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
+  DIAS_SEMANA,
   NIVELES,
   type Nivel,
   type Rol,
@@ -26,8 +27,17 @@ export default function Unirse() {
   const [bio, setBio] = useState("");
   const [instagram, setInstagram] = useState("");
   const [visibilidad, setVisibilidad] = useState<Visibilidad>("academia");
+  const [clasesSel, setClasesSel] = useState<string[]>([]);
   const [hecho, setHecho] = useState(false);
   const [error, setError] = useState("");
+
+  const clases = academia ? store.clasesDe(academia.id) : [];
+
+  function toggleClase(id: string) {
+    setClasesSel((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
 
   if (store.ready && !academia) {
     return (
@@ -60,6 +70,9 @@ export default function Unirse() {
       visibilidad,
     });
     store.identificarme(academia.id, alumno.id);
+    for (const cid of clasesSel) {
+      store.matricular(academia.id, alumno.id, cid);
+    }
     setHecho(true);
   }
 
@@ -156,6 +169,55 @@ export default function Unirse() {
             </option>
           ))}
         </Select>
+
+        {clases.length > 0 && (
+          <div>
+            <span className="mb-1 block text-sm font-medium text-ink-700 dark:text-ink-300">
+              ¿A qué clases vas?
+            </span>
+            <p className="mb-2 text-xs text-ink-500">
+              Marca las tuyas. Puedes ir a varias (días y estilos distintos).
+            </p>
+            <div className="space-y-2">
+              {clases.map((c) => {
+                const sel = clasesSel.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleClase(c.id)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left",
+                      sel
+                        ? "border-brand-500 bg-brand-50 dark:bg-brand-900/30"
+                        : "border-ink-200 dark:border-ink-700",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "grid h-5 w-5 shrink-0 place-items-center rounded-md border text-xs text-white",
+                        sel
+                          ? "border-brand-600 bg-brand-600"
+                          : "border-ink-300 dark:border-ink-600",
+                      )}
+                    >
+                      {sel ? "✓" : ""}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">
+                        {c.nombre}
+                      </span>
+                      <span className="block text-xs text-ink-500">
+                        {DIAS_SEMANA[c.diaSemana]} · {c.hora} · {c.estilo} ·
+                        nivel {c.nivel}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <details className="rounded-xl border border-ink-200 p-3 dark:border-ink-700">
           <summary className="cursor-pointer text-sm font-semibold">

@@ -212,7 +212,18 @@ export default function DetalleClase() {
 
       {/* Quién viene */}
       <section className="mt-8">
-        <h2 className="mb-2 font-bold">Quién viene ({asistentes.length})</h2>
+        <h2 className="mb-2 font-bold">
+          Quién viene ({asistentes.length})
+          {(() => {
+            const matriculados = store.alumnosDeClase(clase.id).length;
+            return matriculados > 0 ? (
+              <span className="font-normal text-ink-500">
+                {" "}
+                · {matriculados} matriculados
+              </span>
+            ) : null;
+          })()}
+        </h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {asistentes.map((a) => {
             const efectivo = efectivos.get(a.id);

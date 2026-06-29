@@ -24,6 +24,7 @@ import type {
   Asistencia,
   Clase,
   EstadoAsistencia,
+  Matricula,
   Rol,
   Video,
 } from "./types";
@@ -38,6 +39,7 @@ interface DB {
   clases: Clase[];
   asistencias: Asistencia[];
   videos: Video[];
+  matriculas: Matricula[];
 }
 
 const VACIO: DB = {
@@ -46,6 +48,7 @@ const VACIO: DB = {
   clases: [],
   asistencias: [],
   videos: [],
+  matriculas: [],
 };
 
 /** Inserta/actualiza por id (para hidratar desde la nube sin duplicar). */
@@ -96,6 +99,11 @@ interface StoreValue {
   // Clases
   crearClase: (c: Omit<Clase, "id" | "createdAt">) => Clase;
   clasesDe: (academiaId: string) => Clase[];
+  // Matrículas (alumno ↔ clase; un alumno puede ir a varias)
+  matricular: (academiaId: string, alumnoId: string, claseId: string) => void;
+  desmatricular: (alumnoId: string, claseId: string) => void;
+  clasesDeAlumno: (alumnoId: string) => Clase[];
+  alumnosDeClase: (claseId: string) => Alumno[];
   // Asistencia
   responder: (
     input: {
@@ -257,6 +265,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         alumnos: prev.alumnos.filter((a) => a.academiaId !== id),
         asistencias: prev.asistencias.filter((a) => a.academiaId !== id),
         videos: prev.videos.filter((v) => v.academiaId !== id),
+        matriculas: prev.matriculas.filter((m) => m.academiaId !== id),
       }));
       // Limpia propiedad e identidad ligera de esa academia.
       setOwned((prev) => {
@@ -324,8 +333,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       update((prev) => ({
         ...prev,
         alumnos: prev.alumnos.filter((a) => a.id !== id),
-        // limpia sus respuestas de asistencia
+        // limpia sus respuestas de asistencia y sus matrículas
         asistencias: prev.asistencias.filter((a) => a.alumnoId !== id),
+        matriculas: prev.matriculas.filter((m) => m.alumnoId !== id),
       }));
       if (MODE === "supabase") encolar(() => remote.eliminarAlumno(id));
     },
@@ -382,6 +392,53 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
+  const matricular: StoreValue["matricular"] = useCallback(
+    (academiaId, alumnoId, claseId) => {
+      let nueva: Matricula | null = null;
+      update((prev) => {
+        // Evita duplicados (mismo alumno + clase).
+        if (
+          prev.matriculas.some(
+            (m) => m.alumnoId === alumnoId && m.claseId === claseId,
+          )
+        ) {
+          return prev;
+        }
+        nueva = {
+          id: newId(),
+          academiaId,
+          claseId,
+          alumnoId,
+          createdAt: new Date().toISOString(),
+        };
+        return { ...prev, matriculas: [...prev.matriculas, nueva] };
+      });
+      if (MODE === "supabase" && nueva)
+        encolar(() => remote.crearMatricula(nueva!));
+    },
+    [update, encolar],
+  );
+
+  const desmatricular: StoreValue["desmatricular"] = useCallback(
+    (alumnoId, claseId) => {
+      let quitarId: string | null = null;
+      update((prev) => {
+        const m = prev.matriculas.find(
+          (x) => x.alumnoId === alumnoId && x.claseId === claseId,
+        );
+        if (!m) return prev;
+        quitarId = m.id;
+        return {
+          ...prev,
+          matriculas: prev.matriculas.filter((x) => x.id !== m.id),
+        };
+      });
+      if (MODE === "supabase" && quitarId)
+        encolar(() => remote.eliminarMatricula(quitarId!));
+    },
+    [update, encolar],
+  );
+
   const responder: StoreValue["responder"] = useCallback(
     (input) => {
       if (MODE === "supabase") encolar(() => remote.responder(input));
@@ -433,12 +490,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const ac = await remote.academiaPorSlug(slug);
         if (ac) {
-          const [alumnos, clases, videos, asistencias] = await Promise.all([
-            remote.alumnosDe(ac.id),
-            remote.clasesDe(ac.id),
-            remote.videosDe(ac.id),
-            remote.asistenciasDeAcademia(ac.id),
-          ]);
+          const [alumnos, clases, videos, asistencias, matriculas] =
+            await Promise.all([
+              remote.alumnosDe(ac.id),
+              remote.clasesDe(ac.id),
+              remote.videosDe(ac.id),
+              remote.asistenciasDeAcademia(ac.id),
+              remote.matriculasDe(ac.id),
+            ]);
           setDb((prev) => ({
             academias: upsertById(prev.academias, [ac]),
             alumnos: reemplazarPorAcademia(prev.alumnos, ac.id, alumnos),
@@ -448,6 +507,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               prev.asistencias,
               ac.id,
               asistencias,
+            ),
+            matriculas: reemplazarPorAcademia(
+              prev.matriculas,
+              ac.id,
+              matriculas,
             ),
           }));
           if (ac.ownerId && auth.user && ac.ownerId === auth.user.id) {
@@ -494,6 +558,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       crearClase,
       clasesDe: (academiaId) =>
         db.clases.filter((c) => c.academiaId === academiaId),
+      matricular,
+      desmatricular,
+      clasesDeAlumno: (alumnoId) => {
+        const ids = new Set(
+          db.matriculas
+            .filter((m) => m.alumnoId === alumnoId)
+            .map((m) => m.claseId),
+        );
+        return db.clases.filter((c) => ids.has(c.id));
+      },
+      alumnosDeClase: (claseId) => {
+        const ids = new Set(
+          db.matriculas
+            .filter((m) => m.claseId === claseId)
+            .map((m) => m.alumnoId),
+        );
+        return db.alumnos.filter((a) => ids.has(a.id));
+      },
       responder,
       asistenciasDe: (claseId, fecha) =>
         db.asistencias.filter(
@@ -524,6 +606,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       actualizarVideo,
       eliminarVideo,
       crearClase,
+      matricular,
+      desmatricular,
       responder,
       update,
     ],

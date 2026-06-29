@@ -11,6 +11,7 @@ import type {
   Asistencia,
   Clase,
   EstadoAsistencia,
+  Matricula,
   ReglasBalance,
   Video,
 } from "./types";
@@ -312,6 +313,42 @@ export async function actualizarVideo(
 
 export async function eliminarVideo(id: string): Promise<void> {
   const { error } = await db().from("videos").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ───────────────────────── Matrículas ─────────────────────────
+
+function matriculaFromRow(r: Record<string, unknown>): Matricula {
+  return {
+    id: r.id as string,
+    academiaId: r.academia_id as string,
+    claseId: r.clase_id as string,
+    alumnoId: r.alumno_id as string,
+    createdAt: r.created_at as string,
+  };
+}
+
+export async function matriculasDe(academiaId: string): Promise<Matricula[]> {
+  const { data, error } = await db()
+    .from("matriculas")
+    .select("*")
+    .eq("academia_id", academiaId);
+  if (error) throw error;
+  return (data ?? []).map(matriculaFromRow);
+}
+
+export async function crearMatricula(m: Matricula): Promise<void> {
+  const { error } = await db().from("matriculas").insert({
+    id: m.id,
+    academia_id: m.academiaId,
+    clase_id: m.claseId,
+    alumno_id: m.alumnoId,
+  });
+  if (error) throw error;
+}
+
+export async function eliminarMatricula(id: string): Promise<void> {
+  const { error } = await db().from("matriculas").delete().eq("id", id);
   if (error) throw error;
 }
 
