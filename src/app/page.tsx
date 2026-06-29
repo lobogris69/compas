@@ -23,6 +23,12 @@ export default function Landing() {
               Ver demo
             </Link>
           )}
+          <Link
+            href="/entrar"
+            className="rounded-xl px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800"
+          >
+            Entrar
+          </Link>
           <LinkButton href="/academia/nueva">Crear mi academia</LinkButton>
         </nav>
       </header>

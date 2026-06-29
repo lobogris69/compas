@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
+import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Compás — cuadra tus clases de baile",
@@ -22,7 +23,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <StoreProvider>{children}</StoreProvider>
+        <AuthProvider>
+          <StoreProvider>{children}</StoreProvider>
+        </AuthProvider>
       </body>
     </html>
   );
