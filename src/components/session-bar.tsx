@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { esAdminPlataforma } from "@/lib/admin";
 import { Button } from "@/components/ui";
 
 // Cabecera global con el estado de sesión del dueño (modo real).
@@ -20,6 +21,14 @@ export function SessionBar() {
           <div className="flex items-center gap-3">
             {auth.user ? (
               <>
+                {esAdminPlataforma(auth.user.email) && (
+                  <Link
+                    href="/admin"
+                    className="text-sm font-semibold text-brand-600 hover:underline"
+                  >
+                    🛡️ Plataforma
+                  </Link>
+                )}
                 <span className="max-w-[40vw] truncate text-sm text-ink-600 dark:text-ink-300">
                   Hola, <span className="font-medium">{auth.user.email}</span>
                 </span>

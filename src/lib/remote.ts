@@ -5,6 +5,7 @@
 // local seguirá siendo el modo por defecto hasta migrarlo a asíncrono.
 
 import { getSupabase } from "./supabase";
+import type { AdminAcademiaResumen } from "./admin";
 import type {
   Academia,
   Alumno,
@@ -258,6 +259,33 @@ export async function eliminarAlumno(id: string): Promise<void> {
 export async function eliminarAcademia(id: string): Promise<void> {
   const { error } = await db().from("academias").delete().eq("id", id);
   if (error) throw error;
+}
+
+// Lista TODAS las academias con sus conteos (panel de plataforma). La lectura
+// es pública por RLS; el gateo de quién accede se hace en la UI (/admin).
+export async function adminListarAcademias(): Promise<AdminAcademiaResumen[]> {
+  const { data, error } = await db()
+    .from("academias")
+    .select(
+      "id,slug,nombre,emoji,color,created_at,alumnos(count),clases(count),videos(count)",
+    )
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const cuenta = (v: unknown): number =>
+    Array.isArray(v) && v[0] && typeof (v[0] as { count?: number }).count === "number"
+      ? (v[0] as { count: number }).count
+      : 0;
+  return (data ?? []).map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    slug: r.slug as string,
+    nombre: r.nombre as string,
+    emoji: r.emoji as string,
+    color: r.color as string,
+    createdAt: r.created_at as string,
+    nAlumnos: cuenta(r.alumnos),
+    nClases: cuenta(r.clases),
+    nVideos: cuenta(r.videos),
+  }));
 }
 
 // ───────────────────────── Vídeos ─────────────────────────
