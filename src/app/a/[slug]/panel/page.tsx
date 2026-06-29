@@ -81,6 +81,11 @@ export default function PanelAcademia() {
           <LinkButton href={`/a/${slug}/alumnos`} variant="secondary">
             Alumnos
           </LinkButton>
+          {store.puedeGestionar(academia.id) && (
+            <LinkButton href={`/a/${slug}/pagos`} variant="secondary">
+              💶 Pagos
+            </LinkButton>
+          )}
           {store.soyDueno(academia.id) && (
             <LinkButton href={`/a/${slug}/config`} variant="ghost">
               Ajustes
