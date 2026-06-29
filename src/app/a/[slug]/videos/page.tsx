@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
+import { subirVideo, LIMITE_VIDEO_MB } from "@/lib/storage";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { CATEGORIAS_VIDEO_SUGERIDAS, type Video } from "@/lib/types";
@@ -211,24 +212,56 @@ function VideoCard({ video, esDueno }: { video: Video; esDueno: boolean }) {
 
 function AltaVideo({ academiaId }: { academiaId: string }) {
   const store = useStore();
+  const nube = store.mode === "supabase";
   const [titulo, setTitulo] = useState("");
   const [categoria, setCategoria] = useState("Figuras");
   const [url, setUrl] = useState("");
+  const [archivo, setArchivo] = useState<File | null>(null);
   const [descripcion, setDescripcion] = useState("");
   const [abierto, setAbierto] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState("");
 
-  function anadir() {
-    if (!titulo.trim() || !url.trim()) return;
+  async function anadir() {
+    if (!titulo.trim()) {
+      setError("Ponle un nombre al vídeo.");
+      return;
+    }
+    if (!archivo && !url.trim()) {
+      setError(
+        nube
+          ? "Sube un archivo o pega un enlace."
+          : "Pega el enlace del vídeo.",
+      );
+      return;
+    }
+    setError("");
+    setSubiendo(true);
+    let urlFinal = url.trim();
+    if (nube && archivo) {
+      try {
+        urlFinal = await subirVideo(archivo);
+      } catch (e) {
+        setSubiendo(false);
+        setError(
+          "No se pudo subir el vídeo. " +
+            (e instanceof Error ? e.message : ""),
+        );
+        return;
+      }
+    }
     store.crearVideo({
       academiaId,
       titulo: titulo.trim(),
       categoria: categoria.trim() || "Sin categoría",
-      url: url.trim(),
+      url: urlFinal,
       descripcion: descripcion.trim(),
     });
     setTitulo("");
     setUrl("");
+    setArchivo(null);
     setDescripcion("");
+    setSubiendo(false);
   }
 
   return (
@@ -267,17 +300,42 @@ function AltaVideo({ academiaId }: { academiaId: string }) {
               onChange={(e) => setUrl(e.target.value)}
             />
           </div>
+          {nube && (
+            <div>
+              <span className="mb-1 block text-sm font-medium text-ink-700 dark:text-ink-300">
+                …o sube un archivo de vídeo
+              </span>
+              <input
+                type="file"
+                accept="video/*"
+                onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-ink-600 file:mr-3 file:cursor-pointer file:rounded-xl file:border-0 file:bg-ink-100 file:px-3 file:py-2 file:text-sm file:font-semibold hover:file:bg-ink-200 dark:file:bg-ink-800 dark:file:text-ink-200"
+              />
+              {archivo && (
+                <p className="mt-1 text-xs text-ink-500">
+                  {archivo.name} ·{" "}
+                  {(archivo.size / (1024 * 1024)).toFixed(1)} MB
+                </p>
+              )}
+            </div>
+          )}
           <Input
             label="Descripción (opcional)"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
           />
           <p className="text-xs text-ink-500">
-            En modo local los vídeos se añaden por enlace. La subida de archivo a
-            almacenamiento llegará con el modo nube (ver SUPABASE.md).
+            {nube
+              ? `Sube un archivo (hasta ${LIMITE_VIDEO_MB} MB) o pega un enlace (YouTube, Drive…).`
+              : "En modo local los vídeos se añaden por enlace."}
           </p>
-          <Button onClick={anadir} className="mt-1">
-            Añadir a la videoteca
+          {error && (
+            <p className="rounded-xl bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+              {error}
+            </p>
+          )}
+          <Button onClick={anadir} disabled={subiendo} className="mt-1">
+            {subiendo ? "Subiendo…" : "Añadir a la videoteca"}
           </Button>
         </div>
       )}
