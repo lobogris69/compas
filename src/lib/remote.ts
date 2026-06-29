@@ -38,6 +38,7 @@ function academiaFromRow(r: Record<string, unknown>): Academia {
       cupoRefuerzos: r.cupo_refuerzos as number,
       nivelesCompatibles: r.niveles_compatibles as boolean,
     },
+    ownerId: (r.owner as string | null) ?? null,
     createdAt: r.created_at as string,
   };
 }
@@ -111,23 +112,25 @@ export async function academiaPorSlug(slug: string): Promise<Academia | null> {
   return data ? academiaFromRow(data) : null;
 }
 
+// Inserta con el id generado en cliente (mismo id en memoria y BD) y el owner
+// del usuario autenticado (lo exige la política RLS).
 export async function crearAcademia(
-  input: Omit<Academia, "id" | "createdAt">,
-): Promise<Academia> {
-  const { data, error } = await db()
+  a: Academia,
+  ownerId: string,
+): Promise<void> {
+  const { error } = await db()
     .from("academias")
     .insert({
-      slug: input.slug,
-      nombre: input.nombre,
-      emoji: input.emoji,
-      color: input.color,
-      estilos: input.estilos,
-      ...reglasToRow(input.reglas),
-    })
-    .select("*")
-    .single();
+      id: a.id,
+      slug: a.slug,
+      nombre: a.nombre,
+      emoji: a.emoji,
+      color: a.color,
+      estilos: a.estilos,
+      owner: ownerId,
+      ...reglasToRow(a.reglas),
+    });
   if (error) throw error;
-  return academiaFromRow(data);
 }
 
 export async function actualizarReglas(
@@ -152,28 +155,44 @@ export async function alumnosDe(academiaId: string): Promise<Alumno[]> {
   return (data ?? []).map(alumnoFromRow);
 }
 
-export async function crearAlumno(
-  input: Omit<Alumno, "id" | "createdAt">,
-): Promise<Alumno> {
-  const { data, error } = await db()
+export async function crearAlumno(a: Alumno): Promise<void> {
+  const { error } = await db()
     .from("alumnos")
     .insert({
-      academia_id: input.academiaId,
-      nombre: input.nombre,
-      rol: input.rol,
-      nivel: input.nivel,
-      sexo: input.sexo,
-      estilos: input.estilos,
-      foto_url: input.fotoUrl,
-      bio: input.bio,
-      bailando_desde: input.bailandoDesde,
-      instagram: input.instagram,
-      visibilidad: input.visibilidad,
-    })
-    .select("*")
-    .single();
+      id: a.id,
+      academia_id: a.academiaId,
+      nombre: a.nombre,
+      rol: a.rol,
+      nivel: a.nivel,
+      sexo: a.sexo,
+      estilos: a.estilos,
+      foto_url: a.fotoUrl,
+      bio: a.bio,
+      bailando_desde: a.bailandoDesde,
+      instagram: a.instagram,
+      visibilidad: a.visibilidad,
+    });
   if (error) throw error;
-  return alumnoFromRow(data);
+}
+
+export async function actualizarAlumno(
+  id: string,
+  patch: Partial<Alumno>,
+): Promise<void> {
+  const row: Record<string, unknown> = {};
+  if (patch.nombre !== undefined) row.nombre = patch.nombre;
+  if (patch.rol !== undefined) row.rol = patch.rol;
+  if (patch.nivel !== undefined) row.nivel = patch.nivel;
+  if (patch.sexo !== undefined) row.sexo = patch.sexo;
+  if (patch.estilos !== undefined) row.estilos = patch.estilos;
+  if (patch.fotoUrl !== undefined) row.foto_url = patch.fotoUrl;
+  if (patch.bio !== undefined) row.bio = patch.bio;
+  if (patch.bailandoDesde !== undefined) row.bailando_desde = patch.bailandoDesde;
+  if (patch.instagram !== undefined) row.instagram = patch.instagram;
+  if (patch.visibilidad !== undefined) row.visibilidad = patch.visibilidad;
+  if (Object.keys(row).length === 0) return;
+  const { error } = await db().from("alumnos").update(row).eq("id", id);
+  if (error) throw error;
 }
 
 // ───────────────────────── Clases ─────────────────────────
@@ -187,25 +206,21 @@ export async function clasesDe(academiaId: string): Promise<Clase[]> {
   return (data ?? []).map(claseFromRow);
 }
 
-export async function crearClase(
-  input: Omit<Clase, "id" | "createdAt">,
-): Promise<Clase> {
-  const { data, error } = await db()
+export async function crearClase(c: Clase): Promise<void> {
+  const { error } = await db()
     .from("clases")
     .insert({
-      academia_id: input.academiaId,
-      nombre: input.nombre,
-      nivel: input.nivel,
-      estilo: input.estilo,
-      dia_semana: input.diaSemana,
-      hora: input.hora,
-      sala: input.sala,
-      aforo: input.aforo,
-    })
-    .select("*")
-    .single();
+      id: c.id,
+      academia_id: c.academiaId,
+      nombre: c.nombre,
+      nivel: c.nivel,
+      estilo: c.estilo,
+      dia_semana: c.diaSemana,
+      hora: c.hora,
+      sala: c.sala,
+      aforo: c.aforo,
+    });
   if (error) throw error;
-  return claseFromRow(data);
 }
 
 // ───────────────────────── Asistencias ─────────────────────────
@@ -252,35 +267,48 @@ export async function videosDe(academiaId: string): Promise<Video[]> {
   return (data ?? []).map(videoFromRow);
 }
 
-export async function crearVideo(
-  input: Omit<Video, "id" | "createdAt">,
-): Promise<Video> {
-  const { data, error } = await db()
+export async function crearVideo(v: Video): Promise<void> {
+  const { error } = await db()
     .from("videos")
     .insert({
-      academia_id: input.academiaId,
-      titulo: input.titulo,
-      categoria: input.categoria,
-      url: input.url,
-      descripcion: input.descripcion,
-    })
-    .select("*")
-    .single();
+      id: v.id,
+      academia_id: v.academiaId,
+      titulo: v.titulo,
+      categoria: v.categoria,
+      url: v.url,
+      descripcion: v.descripcion,
+    });
   if (error) throw error;
-  return videoFromRow(data);
 }
 
 export async function actualizarVideo(
   id: string,
-  patch: Partial<Pick<Video, "titulo" | "categoria" | "descripcion" | "url">>,
+  patch: Partial<Video>,
 ): Promise<void> {
-  const { error } = await db().from("videos").update(patch).eq("id", id);
+  const row: Record<string, unknown> = {};
+  if (patch.titulo !== undefined) row.titulo = patch.titulo;
+  if (patch.categoria !== undefined) row.categoria = patch.categoria;
+  if (patch.descripcion !== undefined) row.descripcion = patch.descripcion;
+  if (patch.url !== undefined) row.url = patch.url;
+  if (Object.keys(row).length === 0) return;
+  const { error } = await db().from("videos").update(row).eq("id", id);
   if (error) throw error;
 }
 
 export async function eliminarVideo(id: string): Promise<void> {
   const { error } = await db().from("videos").delete().eq("id", id);
   if (error) throw error;
+}
+
+export async function asistenciasDeAcademia(
+  academiaId: string,
+): Promise<Asistencia[]> {
+  const { data, error } = await db()
+    .from("asistencias")
+    .select("*")
+    .eq("academia_id", academiaId);
+  if (error) throw error;
+  return (data ?? []).map(asistenciaFromRow);
 }
 
 export async function responder(input: {

@@ -14,6 +14,9 @@ import {
 } from "react";
 import { crearDemo } from "./demo";
 import { newId } from "./slug";
+import { isSupabaseEnabled } from "./supabase";
+import { useAuth } from "./auth";
+import * as remote from "./remote";
 import type {
   Academia,
   Alumno,
@@ -44,9 +47,30 @@ const VACIO: DB = {
   videos: [],
 };
 
+/** Inserta/actualiza por id (para hidratar desde la nube sin duplicar). */
+function upsertById<T extends { id: string }>(arr: T[], items: T[]): T[] {
+  const ids = new Set(items.map((i) => i.id));
+  return [...arr.filter((a) => !ids.has(a.id)), ...items];
+}
+
+/** Sustituye todos los elementos de una academia por los recién cargados. */
+function reemplazarPorAcademia<T extends { academiaId: string }>(
+  arr: T[],
+  academiaId: string,
+  frescos: T[],
+): T[] {
+  return [...arr.filter((a) => a.academiaId !== academiaId), ...frescos];
+}
+
 interface StoreValue {
   ready: boolean;
   db: DB;
+  /** "local" (localStorage) o "supabase" (modo real). */
+  mode: "local" | "supabase";
+  /** Carga una academia y sus datos desde Supabase (modo real). No-op en local. */
+  cargarAcademia: (slug: string) => Promise<void>;
+  /** ¿Se está cargando esa academia desde la nube? */
+  cargandoAcademia: (slug: string) => boolean;
   // Academias
   crearAcademia: (a: Omit<Academia, "id" | "createdAt">) => Academia;
   actualizarAcademia: (id: string, patch: Partial<Academia>) => void;
@@ -116,17 +140,29 @@ function loadOwned(): string[] {
   }
 }
 
+const MODE: "local" | "supabase" = isSupabaseEnabled ? "supabase" : "local";
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
+  const auth = useAuth();
   const [db, setDb] = useState<DB>(VACIO);
   const [yo, setYo] = useState<Record<string, string>>({});
   const [owned, setOwned] = useState<string[]>([]);
+  const [cargando, setCargando] = useState<string[]>([]); // slugs cargándose (nube)
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    setYo(loadYo());
+    // Modo nube: la fuente de verdad es Supabase; los datos se cargan por
+    // academia bajo demanda (ver cargarAcademia). No sembramos demo.
+    if (MODE === "supabase") {
+      setDb(VACIO);
+      setOwned([]);
+      setReady(true);
+      return;
+    }
+    // Modo local: localStorage + demo en la primera visita.
     const loaded = load();
     let ownedIds = loadOwned();
-    // Primera visita: sembramos una academia de demo para que se vea viva,
-    // y te marcamos como su dueño para poder probar la gestión.
     if (loaded.academias.length === 0) {
       const demo = crearDemo();
       setDb(demo);
@@ -139,11 +175,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setDb(loaded);
     }
     setOwned(ownedIds);
-    setYo(loadYo());
     setReady(true);
   }, []);
 
   const persist = (next: DB) => {
+    // En modo nube la verdad está en Supabase; no cacheamos datos en localStorage.
+    if (MODE !== "local") return;
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     }
@@ -159,22 +196,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const crearAcademia: StoreValue["crearAcademia"] = useCallback(
     (input) => {
+      const ownerId = MODE === "supabase" ? auth.user?.id ?? null : null;
       const academia: Academia = {
         ...input,
         id: newId(),
+        ownerId,
         createdAt: new Date().toISOString(),
       };
       update((prev) => ({ ...prev, academias: [...prev.academias, academia] }));
       setOwned((prev) => {
         const next = [...prev, academia.id];
-        if (typeof window !== "undefined") {
+        if (MODE === "local" && typeof window !== "undefined") {
           window.localStorage.setItem(OWNER_KEY, JSON.stringify(next));
         }
         return next;
       });
+      if (MODE === "supabase" && ownerId) {
+        remote.crearAcademia(academia, ownerId).catch(console.error);
+      }
       return academia;
     },
-    [update],
+    [update, auth.user],
   );
 
   const actualizarAcademia: StoreValue["actualizarAcademia"] = useCallback(
@@ -185,6 +227,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           a.id === id ? { ...a, ...patch } : a,
         ),
       }));
+      if (MODE === "supabase" && patch.reglas) {
+        remote.actualizarReglas(id, patch.reglas).catch(console.error);
+      }
     },
     [update],
   );
@@ -210,6 +255,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       update((prev) => ({ ...prev, alumnos: [...prev.alumnos, alumno] }));
+      if (MODE === "supabase") remote.crearAlumno(alumno).catch(console.error);
       return alumno;
     },
     [update],
@@ -221,6 +267,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         alumnos: prev.alumnos.map((a) => (a.id === id ? { ...a, ...patch } : a)),
       }));
+      if (MODE === "supabase")
+        remote.actualizarAlumno(id, patch).catch(console.error);
     },
     [update],
   );
@@ -233,6 +281,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         // limpia sus respuestas de asistencia
         asistencias: prev.asistencias.filter((a) => a.alumnoId !== id),
       }));
+      if (MODE === "supabase") remote.eliminarAlumno(id).catch(console.error);
     },
     [update],
   );
@@ -245,6 +294,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       update((prev) => ({ ...prev, videos: [...prev.videos, video] }));
+      if (MODE === "supabase") remote.crearVideo(video).catch(console.error);
       return video;
     },
     [update],
@@ -256,6 +306,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         videos: prev.videos.map((v) => (v.id === id ? { ...v, ...patch } : v)),
       }));
+      if (MODE === "supabase")
+        remote.actualizarVideo(id, patch).catch(console.error);
     },
     [update],
   );
@@ -266,6 +318,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         videos: prev.videos.filter((v) => v.id !== id),
       }));
+      if (MODE === "supabase") remote.eliminarVideo(id).catch(console.error);
     },
     [update],
   );
@@ -278,6 +331,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       update((prev) => ({ ...prev, clases: [...prev.clases, clase] }));
+      if (MODE === "supabase") remote.crearClase(clase).catch(console.error);
       return clase;
     },
     [update],
@@ -285,6 +339,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const responder: StoreValue["responder"] = useCallback(
     (input) => {
+      if (MODE === "supabase") remote.responder(input).catch(console.error);
       update((prev) => {
         const existe = prev.asistencias.find(
           (a) =>
@@ -324,10 +379,54 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
+  const cargarAcademia: StoreValue["cargarAcademia"] = useCallback(
+    async (slug) => {
+      if (MODE !== "supabase") return;
+      // ya en memoria → no recargar
+      if (db.academias.some((a) => a.slug === slug)) return;
+      setCargando((prev) => (prev.includes(slug) ? prev : [...prev, slug]));
+      try {
+        const ac = await remote.academiaPorSlug(slug);
+        if (ac) {
+          const [alumnos, clases, videos, asistencias] = await Promise.all([
+            remote.alumnosDe(ac.id),
+            remote.clasesDe(ac.id),
+            remote.videosDe(ac.id),
+            remote.asistenciasDeAcademia(ac.id),
+          ]);
+          setDb((prev) => ({
+            academias: upsertById(prev.academias, [ac]),
+            alumnos: reemplazarPorAcademia(prev.alumnos, ac.id, alumnos),
+            clases: reemplazarPorAcademia(prev.clases, ac.id, clases),
+            videos: reemplazarPorAcademia(prev.videos, ac.id, videos),
+            asistencias: reemplazarPorAcademia(
+              prev.asistencias,
+              ac.id,
+              asistencias,
+            ),
+          }));
+          if (ac.ownerId && auth.user && ac.ownerId === auth.user.id) {
+            setOwned((prev) =>
+              prev.includes(ac.id) ? prev : [...prev, ac.id],
+            );
+          }
+        }
+      } catch (e) {
+        console.error("cargarAcademia", e);
+      } finally {
+        setCargando((prev) => prev.filter((s) => s !== slug));
+      }
+    },
+    [db.academias, auth.user],
+  );
+
   const value = useMemo<StoreValue>(
     () => ({
       ready,
       db,
+      mode: MODE,
+      cargarAcademia,
+      cargandoAcademia: (slug) => cargando.includes(slug),
       crearAcademia,
       actualizarAcademia,
       academiaPorSlug: (slug) => db.academias.find((a) => a.slug === slug),
@@ -366,6 +465,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       db,
       yo,
       owned,
+      cargando,
+      cargarAcademia,
       crearAcademia,
       actualizarAcademia,
       identificarme,

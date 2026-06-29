@@ -1,47 +1,49 @@
-# Conectar Compás a Supabase (modo nube)
+# Conectar Compás a Supabase (modo real)
+
+> ⚠️ **Proyecto independiente.** Compás NO comparte nada con CuentaClara ni con
+> ningún otro proyecto. Crea un **proyecto Supabase NUEVO y exclusivo** para
+> Compás. No reutilices la base de datos de otra app.
 
 Compás funciona en **modo local** (localStorage) sin configurar nada. Para
-persistencia real y multi-academia de verdad, conéctalo a Supabase.
+persistencia real multi-academia, conéctalo a su propio Supabase.
 
 ## 1. Crear el proyecto y aplicar el esquema
-1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. En el **SQL Editor**, pega y ejecuta `supabase/migrations/0001_init.sql`.
-   Crea las tablas `academias`, `alumnos`, `clases`, `asistencias` con sus
-   políticas RLS (aislamiento por academia).
+1. Crea un proyecto **nuevo** en [supabase.com](https://supabase.com) (solo para Compás).
+2. En el **SQL Editor**, ejecuta en orden:
+   - `supabase/migrations/0001_init.sql` (academias, alumnos, clases, asistencias + RLS)
+   - `supabase/migrations/0002_videos.sql` (videoteca + RLS)
 
 ## 2. Configurar las variables de entorno
-Copia `.env.local.example` a `.env.local` y rellena:
+Copia `.env.local.example` a `.env.local` y rellena con **las claves de tu
+proyecto nuevo** (Project Settings → API):
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO-COMPAS.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```
 
-Con esas variables, `isSupabaseEnabled` (en `src/lib/supabase.ts`) pasa a `true`.
+Con esas variables, la app arranca en **modo real** automáticamente
+(`isSupabaseEnabled`).
 
-## 3. Lo que ya está listo
-- `src/lib/supabase.ts` — cliente singleton.
-- `src/lib/remote.ts` — **adaptador de datos** tipado contra el esquema
-  (academias, alumnos, clases, asistencias) con mapeo snake_case ↔ camelCase.
+## 3. Auth (dueños de academia)
+- Login **email + contraseña** ya implementado (`/entrar`, `src/lib/auth.tsx`).
+- En el panel de Supabase, **Authentication → Providers → Email**: decide si
+  exiges confirmación de email. Para pruebas puedes desactivarla.
+- Al crear una academia logueado, se guarda con `owner = tu usuario`; las
+  políticas RLS solo te dejan gestionar **tus** academias.
 
-## 4. Paso pendiente: cablear el store
-El store (`src/lib/store.tsx`) es hoy **síncrono** (local). Para usar el modo
-nube hay que migrarlo a **asíncrono** y, cuando `isSupabaseEnabled`, delegar en
-`remote.ts` en lugar de en localStorage. La API pública del store ya está
-pensada para ese cambio (mismos nombres de métodos):
+## 4. Qué hace ya el modo real
+- **Store cableado** (`src/lib/store.tsx`): en modo nube no usa demo ni
+  localStorage para los datos; carga cada academia desde Supabase bajo demanda
+  (`cargarAcademia`) y **persiste cada cambio** (write-through) vía
+  `src/lib/remote.ts`. Los ids se generan en cliente (UUID) para que memoria y
+  BD coincidan.
+- Crear academia, clases, alumnos, RSVP, vídeos y bajas → se guardan en Supabase.
 
-| Store (local) | Remoto (`remote.ts`) |
-|---|---|
-| `academiaPorSlug` | `academiaPorSlug` (async) |
-| `crearAcademia` | `crearAcademia` (async) |
-| `alumnosDe` / `crearAlumno` | idem (async) |
-| `clasesDe` / `crearClase` | idem (async) |
-| `asistenciasDe` / `responder` | idem (async, upsert) |
+## 5. Pendiente para completar el modo real
+- **Subida de archivos de vídeo a Storage** (hoy los vídeos se añaden por enlace).
+- Afinar estados de carga/errores con pruebas contra el proyecto real.
+- Reglas de Storage y, si se quiere, login también para alumnos.
 
-Recomendación: mantener el modo local como *fallback* offline y cachear lecturas,
-igual que hace CuentaClara.
-
-## 5. Autenticación
-El esquema ya contempla `auth.users` (columna `owner` en academias, `user_id` en
-alumnos) y las políticas RLS para que **solo el dueño** gestione su academia.
-Falta añadir el login (Supabase Auth) y rellenar esas columnas al crear.
+> Todo el código de modo real está escrito y compila, pero **necesita probarse
+> contra tu proyecto Supabase real** para pulir detalles de RLS y Auth.

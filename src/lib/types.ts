@@ -32,6 +32,8 @@ export interface Academia {
   color: string;
   estilos: string[];
   reglas: ReglasBalance;
+  /** Dueño (auth.users.id) en modo nube; null/ausente en modo local. */
+  ownerId?: string | null;
   createdAt: string;
 }
 
