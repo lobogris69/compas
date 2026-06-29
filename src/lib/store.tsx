@@ -21,6 +21,7 @@ import type {
   Clase,
   EstadoAsistencia,
   Rol,
+  Video,
 } from "./types";
 
 const STORAGE_KEY = "compas:data:v1";
@@ -32,9 +33,16 @@ interface DB {
   alumnos: Alumno[];
   clases: Clase[];
   asistencias: Asistencia[];
+  videos: Video[];
 }
 
-const VACIO: DB = { academias: [], alumnos: [], clases: [], asistencias: [] };
+const VACIO: DB = {
+  academias: [],
+  alumnos: [],
+  clases: [],
+  asistencias: [],
+  videos: [],
+};
 
 interface StoreValue {
   ready: boolean;
@@ -51,7 +59,13 @@ interface StoreValue {
   // Alumnos
   crearAlumno: (a: Omit<Alumno, "id" | "createdAt">) => Alumno;
   actualizarAlumno: (id: string, patch: Partial<Alumno>) => void;
+  eliminarAlumno: (id: string) => void; // dar de baja
   alumnosDe: (academiaId: string) => Alumno[];
+  // Vídeos
+  crearVideo: (v: Omit<Video, "id" | "createdAt">) => Video;
+  actualizarVideo: (id: string, patch: Partial<Video>) => void;
+  eliminarVideo: (id: string) => void;
+  videosDe: (academiaId: string) => Video[];
   // Clases
   crearClase: (c: Omit<Clase, "id" | "createdAt">) => Clase;
   clasesDe: (academiaId: string) => Clase[];
@@ -211,6 +225,51 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
+  const eliminarAlumno: StoreValue["eliminarAlumno"] = useCallback(
+    (id) => {
+      update((prev) => ({
+        ...prev,
+        alumnos: prev.alumnos.filter((a) => a.id !== id),
+        // limpia sus respuestas de asistencia
+        asistencias: prev.asistencias.filter((a) => a.alumnoId !== id),
+      }));
+    },
+    [update],
+  );
+
+  const crearVideo: StoreValue["crearVideo"] = useCallback(
+    (input) => {
+      const video: Video = {
+        ...input,
+        id: newId(),
+        createdAt: new Date().toISOString(),
+      };
+      update((prev) => ({ ...prev, videos: [...prev.videos, video] }));
+      return video;
+    },
+    [update],
+  );
+
+  const actualizarVideo: StoreValue["actualizarVideo"] = useCallback(
+    (id, patch) => {
+      update((prev) => ({
+        ...prev,
+        videos: prev.videos.map((v) => (v.id === id ? { ...v, ...patch } : v)),
+      }));
+    },
+    [update],
+  );
+
+  const eliminarVideo: StoreValue["eliminarVideo"] = useCallback(
+    (id) => {
+      update((prev) => ({
+        ...prev,
+        videos: prev.videos.filter((v) => v.id !== id),
+      }));
+    },
+    [update],
+  );
+
   const crearClase: StoreValue["crearClase"] = useCallback(
     (input) => {
       const clase: Clase = {
@@ -277,8 +336,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       identificarme,
       crearAlumno,
       actualizarAlumno,
+      eliminarAlumno,
       alumnosDe: (academiaId) =>
         db.alumnos.filter((a) => a.academiaId === academiaId),
+      crearVideo,
+      actualizarVideo,
+      eliminarVideo,
+      videosDe: (academiaId) =>
+        db.videos
+          .filter((v) => v.academiaId === academiaId)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       crearClase,
       clasesDe: (academiaId) =>
         db.clases.filter((c) => c.academiaId === academiaId),
@@ -304,6 +371,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       identificarme,
       crearAlumno,
       actualizarAlumno,
+      eliminarAlumno,
+      crearVideo,
+      actualizarVideo,
+      eliminarVideo,
       crearClase,
       responder,
       update,

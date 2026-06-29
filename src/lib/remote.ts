@@ -12,6 +12,7 @@ import type {
   Clase,
   EstadoAsistencia,
   ReglasBalance,
+  Video,
 } from "./types";
 
 function db() {
@@ -220,6 +221,66 @@ export async function asistenciasDe(
     .eq("fecha", fecha);
   if (error) throw error;
   return (data ?? []).map(asistenciaFromRow);
+}
+
+export async function eliminarAlumno(id: string): Promise<void> {
+  const { error } = await db().from("alumnos").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ───────────────────────── Vídeos ─────────────────────────
+
+function videoFromRow(r: Record<string, unknown>): Video {
+  return {
+    id: r.id as string,
+    academiaId: r.academia_id as string,
+    titulo: r.titulo as string,
+    categoria: r.categoria as string,
+    url: r.url as string,
+    descripcion: (r.descripcion as string) ?? "",
+    createdAt: r.created_at as string,
+  };
+}
+
+export async function videosDe(academiaId: string): Promise<Video[]> {
+  const { data, error } = await db()
+    .from("videos")
+    .select("*")
+    .eq("academia_id", academiaId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(videoFromRow);
+}
+
+export async function crearVideo(
+  input: Omit<Video, "id" | "createdAt">,
+): Promise<Video> {
+  const { data, error } = await db()
+    .from("videos")
+    .insert({
+      academia_id: input.academiaId,
+      titulo: input.titulo,
+      categoria: input.categoria,
+      url: input.url,
+      descripcion: input.descripcion,
+    })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return videoFromRow(data);
+}
+
+export async function actualizarVideo(
+  id: string,
+  patch: Partial<Pick<Video, "titulo" | "categoria" | "descripcion" | "url">>,
+): Promise<void> {
+  const { error } = await db().from("videos").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+export async function eliminarVideo(id: string): Promise<void> {
+  const { error } = await db().from("videos").delete().eq("id", id);
+  if (error) throw error;
 }
 
 export async function responder(input: {

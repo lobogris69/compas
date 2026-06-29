@@ -80,6 +80,26 @@ export interface Asistencia {
   updatedAt: string;
 }
 
+/** Vídeo de la academia (clase, figura, evento, actuación…). */
+export interface Video {
+  id: string;
+  academiaId: string;
+  titulo: string;
+  categoria: string;
+  url: string;
+  descripcion: string;
+  createdAt: string;
+}
+
+export const CATEGORIAS_VIDEO_SUGERIDAS = [
+  "Figuras",
+  "Clases",
+  "Eventos",
+  "Actuaciones",
+  "Técnica",
+  "Coreografías",
+];
+
 export const NIVELES: Nivel[] = ["principiante", "medio", "avanzado"];
 export const ROLES: Rol[] = ["leader", "follower", "ambos"];
 

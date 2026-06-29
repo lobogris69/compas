@@ -12,15 +12,17 @@ export default function Comunidad() {
   const { slug } = useParams<{ slug: string }>();
   const store = useStore();
   const academia = store.academiaPorSlug(slug);
+  const esDueno = academia ? store.soyDueno(academia.id) : false;
   const [filtro, setFiltro] = useState<Rol | "todos">("todos");
 
   const visibles = useMemo(() => {
     if (!academia) return [];
     return store
       .alumnosDe(academia.id)
-      .filter((a) => a.visibilidad !== "privado")
+      // el dueño ve a todos (para gestionar/dar de baja); el resto respeta privacidad
+      .filter((a) => esDueno || a.visibilidad !== "privado")
       .filter((a) => filtro === "todos" || a.rol === filtro);
-  }, [academia, filtro, store]);
+  }, [academia, esDueno, filtro, store]);
 
   if (store.ready && !academia) {
     return (
@@ -91,6 +93,21 @@ export default function Comunidad() {
               )}
               {a.instagram && (
                 <p className="mt-1 text-xs text-brand-600">{a.instagram}</p>
+              )}
+              {esDueno && (
+                <button
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `¿Dar de baja a ${a.nombre}? Se eliminará de la academia.`,
+                      )
+                    )
+                      store.eliminarAlumno(a.id);
+                  }}
+                  className="mt-2 rounded-lg px-2 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                >
+                  Dar de baja
+                </button>
               )}
             </div>
           </Card>

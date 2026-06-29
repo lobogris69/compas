@@ -9,6 +9,7 @@ import {
   type Clase,
   REGLAS_POR_DEFECTO,
   type Rol,
+  type Video,
 } from "./types";
 
 export interface DemoData {
@@ -16,6 +17,7 @@ export interface DemoData {
   alumnos: Alumno[];
   clases: Clase[];
   asistencias: Asistencia[];
+  videos: Video[];
 }
 
 const NOMBRES_LEADER = [
@@ -148,5 +150,41 @@ export function crearDemo(): DemoData {
     };
   });
 
-  return { academias: [academia], alumnos, clases, asistencias };
+  const video = (
+    titulo: string,
+    categoria: string,
+    url: string,
+    descripcion = "",
+  ): Video => ({
+    id: newId(),
+    academiaId,
+    titulo,
+    categoria,
+    url,
+    descripcion,
+    createdAt: new Date().toISOString(),
+  });
+
+  const videos: Video[] = [
+    video(
+      "El Sombrero",
+      "Figuras",
+      "https://www.youtube.com/results?search_query=salsa+el+sombrero",
+      "Figura de salsa paso a paso. Repásala antes de la próxima clase.",
+    ),
+    video(
+      "Enchufla doble",
+      "Figuras",
+      "https://www.youtube.com/results?search_query=salsa+enchufla+doble",
+      "Variación de la enchufla con doble vuelta.",
+    ),
+    video(
+      "Actuación Gala Fin de Curso 2025",
+      "Actuaciones",
+      "https://www.youtube.com/results?search_query=gala+salsa",
+      "Nuestra actuación de la gala. ¡Gracias a todos!",
+    ),
+  ];
+
+  return { academias: [academia], alumnos, clases, asistencias, videos };
 }

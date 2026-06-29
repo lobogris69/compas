@@ -78,6 +78,12 @@ export default function HomeAlumno() {
         </div>
         <div className="flex flex-col items-end gap-1">
           <Link
+            href={`/a/${slug}/videos`}
+            className="text-sm font-semibold text-brand-600"
+          >
+            🎬 Videoteca
+          </Link>
+          <Link
             href={`/a/${slug}/alumnos`}
             className="text-sm font-semibold text-brand-600"
           >
