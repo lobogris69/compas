@@ -166,7 +166,7 @@ export default function DetalleClase() {
           <div className="space-y-2">
             {refuerzos.map(({ alumno }) => (
               <Card key={alumno.id} className="flex items-center gap-3 py-3">
-                <Avatar nombre={alumno.nombre} />
+                <Avatar nombre={alumno.nombre} fotoUrl={alumno.fotoUrl} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{alumno.nombre}</p>
                   <p className="text-xs text-ink-500">nivel {alumno.nivel}</p>
@@ -218,7 +218,7 @@ export default function DetalleClase() {
             const efectivo = efectivos.get(a.id);
             return (
               <Card key={a.id} className="flex items-center gap-3 py-3">
-                <Avatar nombre={a.nombre} />
+                <Avatar nombre={a.nombre} fotoUrl={a.fotoUrl} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{a.nombre}</p>
                   <p className="text-xs text-ink-500">nivel {a.nivel}</p>
@@ -252,11 +252,21 @@ export default function DetalleClase() {
   );
 }
 
-function Avatar({ nombre }: { nombre: string }) {
-  const inicial = nombre.charAt(0).toUpperCase();
+function Avatar({
+  nombre,
+  fotoUrl,
+}: {
+  nombre: string;
+  fotoUrl?: string | null;
+}) {
   return (
-    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
-      {inicial}
+    <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+      {fotoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={fotoUrl} alt={nombre} className="h-full w-full object-cover" />
+      ) : (
+        nombre.charAt(0).toUpperCase()
+      )}
     </div>
   );
 }
