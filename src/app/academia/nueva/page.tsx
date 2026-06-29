@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
+import { subirLogo } from "@/lib/storage";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { slugify } from "@/lib/slug";
@@ -19,13 +20,15 @@ const EMOJIS = ["💃", "🕺", "🎶", "🔥", "✨", "🌹", "🎵", "👯"];
 
 export default function NuevaAcademia() {
   const router = useRouter();
-  const { crearAcademia, academiaPorSlug, crearClase } = useStore();
+  const { crearAcademia, academiaPorSlug, crearClase, mode } = useStore();
 
   // Identidad
   const [nombre, setNombre] = useState("");
   const [emoji, setEmoji] = useState("💃");
   const [color, setColor] = useState("#7c4dff");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [guardando, setGuardando] = useState(false);
   // Contacto
   const [ubicacion, setUbicacion] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -61,9 +64,16 @@ export default function NuevaAcademia() {
   function onLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setLogoFile(file);
+    // Preview inmediato con dataURL (en local también es el valor que se guarda).
     const reader = new FileReader();
     reader.onload = () => setLogoUrl(reader.result as string);
     reader.readAsDataURL(file);
+  }
+
+  function quitarLogo() {
+    setLogoUrl(null);
+    setLogoFile(null);
   }
 
   function añadirProfesor() {
@@ -92,7 +102,7 @@ export default function NuevaAcademia() {
     setProfesores((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  function crear() {
+  async function crear() {
     if (!nombre.trim()) {
       setError("Pon un nombre a tu academia.");
       return;
@@ -101,13 +111,30 @@ export default function NuevaAcademia() {
       setError("Ya existe una academia con ese nombre. Prueba otro.");
       return;
     }
+    setError("");
+    setGuardando(true);
+    // En modo real el logo va a Storage (solo guardamos la URL). En local, el
+    // dataURL del preview es el valor definitivo.
+    let logoFinal = logoUrl;
+    if (mode === "supabase" && logoFile) {
+      try {
+        logoFinal = await subirLogo(logoFile);
+      } catch (e) {
+        setGuardando(false);
+        setError(
+          "No se pudo subir el logo. Revisa el bucket 'logos' en Supabase. " +
+            (e instanceof Error ? e.message : ""),
+        );
+        return;
+      }
+    }
     const estilosFinal = estilos.length ? estilos : ["Salsa"];
     const academia = crearAcademia({
       slug,
       nombre: nombre.trim(),
       emoji,
       color,
-      logoUrl,
+      logoUrl: logoFinal,
       ubicacion: ubicacion.trim(),
       telefono: telefono.trim(),
       estilos: estilosFinal,
@@ -186,7 +213,7 @@ export default function NuevaAcademia() {
                   {logoUrl && (
                     <button
                       type="button"
-                      onClick={() => setLogoUrl(null)}
+                      onClick={quitarLogo}
                       className="text-sm text-rose-600 hover:underline"
                     >
                       Quitar
@@ -396,8 +423,12 @@ export default function NuevaAcademia() {
           </p>
         )}
 
-        <Button onClick={crear} className="w-full py-3 text-base">
-          Crear academia
+        <Button
+          onClick={crear}
+          disabled={guardando}
+          className="w-full py-3 text-base"
+        >
+          {guardando ? "Creando…" : "Crear academia"}
         </Button>
       </div>
     </main>
