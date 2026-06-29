@@ -53,6 +53,8 @@ export default function PanelAcademia() {
   }
 
   const selFila = filas.find((f) => f.clase.id === claseSelId) ?? filas[0];
+  const soyProfe =
+    store.esProfesor(academia.id) && !store.soyDueno(academia.id);
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-8">
@@ -66,6 +68,11 @@ export default function PanelAcademia() {
           <p className="text-sm text-ink-500">
             {alumnos.length} alumnos · {clases.length} clases
           </p>
+          {soyProfe && (
+            <span className="mt-1 inline-block rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+              🧑‍🏫 Profesor
+            </span>
+          )}
         </div>
         <div className="ml-auto flex gap-2">
           <LinkButton href={`/a/${slug}/videos`} variant="secondary">

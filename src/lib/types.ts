@@ -94,6 +94,18 @@ export interface Asistencia {
   updatedAt: string;
 }
 
+/** Rol de un miembro con acceso de gestión a la academia. */
+export type RolMiembro = "profesor";
+
+/** Miembro con acceso (profesor) a una academia, invitado por el dueño por email. */
+export interface Miembro {
+  id: string;
+  academiaId: string;
+  email: string;
+  rol: RolMiembro;
+  createdAt: string;
+}
+
 /** Matrícula: vincula un alumno con una clase de su academia (puede tener varias). */
 export interface Matricula {
   id: string;

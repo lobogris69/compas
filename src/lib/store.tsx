@@ -25,6 +25,7 @@ import type {
   Clase,
   EstadoAsistencia,
   Matricula,
+  Miembro,
   Rol,
   Video,
 } from "./types";
@@ -40,6 +41,7 @@ interface DB {
   asistencias: Asistencia[];
   videos: Video[];
   matriculas: Matricula[];
+  miembros: Miembro[];
 }
 
 const VACIO: DB = {
@@ -49,6 +51,7 @@ const VACIO: DB = {
   asistencias: [],
   videos: [],
   matriculas: [],
+  miembros: [],
 };
 
 /** Inserta/actualiza por id (para hidratar desde la nube sin duplicar). */
@@ -83,6 +86,14 @@ interface StoreValue {
   academiaPorSlug: (slug: string) => Academia | undefined;
   /** ¿Soy el dueño de esta academia? (gestión: panel, ajustes). */
   soyDueno: (academiaId: string) => boolean;
+  /** ¿Soy profesor con acceso a esta academia? (por el email de mi sesión). */
+  esProfesor: (academiaId: string) => boolean;
+  /** ¿Puedo gestionar (subir vídeos, ver estado)? Dueño o profesor. */
+  puedeGestionar: (academiaId: string) => boolean;
+  // Miembros (profesores con acceso)
+  invitarMiembro: (academiaId: string, email: string) => void;
+  quitarMiembro: (id: string) => void;
+  miembrosDe: (academiaId: string) => Miembro[];
   // Identidad ligera del alumno (modo local): qué alumno "soy" en cada academia
   yoEn: (academiaId: string) => string | null;
   identificarme: (academiaId: string, alumnoId: string) => void;
@@ -266,6 +277,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         asistencias: prev.asistencias.filter((a) => a.academiaId !== id),
         videos: prev.videos.filter((v) => v.academiaId !== id),
         matriculas: prev.matriculas.filter((m) => m.academiaId !== id),
+        miembros: prev.miembros.filter((m) => m.academiaId !== id),
       }));
       // Limpia propiedad e identidad ligera de esa academia.
       setOwned((prev) => {
@@ -439,6 +451,47 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [update, encolar],
   );
 
+  const invitarMiembro: StoreValue["invitarMiembro"] = useCallback(
+    (academiaId, email) => {
+      const correo = email.trim().toLowerCase();
+      if (!correo) return;
+      let nuevo: Miembro | null = null;
+      update((prev) => {
+        if (
+          prev.miembros.some(
+            (m) =>
+              m.academiaId === academiaId &&
+              m.email.toLowerCase() === correo,
+          )
+        ) {
+          return prev;
+        }
+        nuevo = {
+          id: newId(),
+          academiaId,
+          email: correo,
+          rol: "profesor",
+          createdAt: new Date().toISOString(),
+        };
+        return { ...prev, miembros: [...prev.miembros, nuevo] };
+      });
+      if (MODE === "supabase" && nuevo)
+        encolar(() => remote.crearMiembro(nuevo!));
+    },
+    [update, encolar],
+  );
+
+  const quitarMiembro: StoreValue["quitarMiembro"] = useCallback(
+    (id) => {
+      update((prev) => ({
+        ...prev,
+        miembros: prev.miembros.filter((m) => m.id !== id),
+      }));
+      if (MODE === "supabase") encolar(() => remote.eliminarMiembro(id));
+    },
+    [update, encolar],
+  );
+
   const responder: StoreValue["responder"] = useCallback(
     (input) => {
       if (MODE === "supabase") encolar(() => remote.responder(input));
@@ -490,13 +543,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const ac = await remote.academiaPorSlug(slug);
         if (ac) {
-          const [alumnos, clases, videos, asistencias, matriculas] =
+          const [alumnos, clases, videos, asistencias, matriculas, miembros] =
             await Promise.all([
               remote.alumnosDe(ac.id),
               remote.clasesDe(ac.id),
               remote.videosDe(ac.id),
               remote.asistenciasDeAcademia(ac.id),
               remote.matriculasDe(ac.id),
+              remote.miembrosDe(ac.id),
             ]);
           setDb((prev) => ({
             academias: upsertById(prev.academias, [ac]),
@@ -513,6 +567,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               ac.id,
               matriculas,
             ),
+            miembros: reemplazarPorAcademia(prev.miembros, ac.id, miembros),
           }));
           if (ac.ownerId && auth.user && ac.ownerId === auth.user.id) {
             setOwned((prev) =>
@@ -541,6 +596,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       eliminarAcademia,
       academiaPorSlug: (slug) => db.academias.find((a) => a.slug === slug),
       soyDueno: (academiaId) => owned.includes(academiaId),
+      esProfesor: (academiaId) => {
+        const email = auth.user?.email?.toLowerCase();
+        if (!email) return false;
+        return db.miembros.some(
+          (m) =>
+            m.academiaId === academiaId && m.email.toLowerCase() === email,
+        );
+      },
+      puedeGestionar: (academiaId) => {
+        if (owned.includes(academiaId)) return true;
+        const email = auth.user?.email?.toLowerCase();
+        if (!email) return false;
+        return db.miembros.some(
+          (m) =>
+            m.academiaId === academiaId && m.email.toLowerCase() === email,
+        );
+      },
+      invitarMiembro,
+      quitarMiembro,
+      miembrosDe: (academiaId) =>
+        db.miembros.filter((m) => m.academiaId === academiaId),
       yoEn: (academiaId) => yo[academiaId] ?? null,
       identificarme,
       crearAlumno,
@@ -608,8 +684,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       crearClase,
       matricular,
       desmatricular,
+      invitarMiembro,
+      quitarMiembro,
       responder,
       update,
+      auth.user,
     ],
   );
 

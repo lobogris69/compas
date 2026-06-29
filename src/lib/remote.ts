@@ -12,6 +12,7 @@ import type {
   Clase,
   EstadoAsistencia,
   Matricula,
+  Miembro,
   ReglasBalance,
   Video,
 } from "./types";
@@ -349,6 +350,42 @@ export async function crearMatricula(m: Matricula): Promise<void> {
 
 export async function eliminarMatricula(id: string): Promise<void> {
   const { error } = await db().from("matriculas").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ───────────────────────── Miembros (profesores) ─────────────────────────
+
+function miembroFromRow(r: Record<string, unknown>): Miembro {
+  return {
+    id: r.id as string,
+    academiaId: r.academia_id as string,
+    email: r.email as string,
+    rol: r.rol as Miembro["rol"],
+    createdAt: r.created_at as string,
+  };
+}
+
+export async function miembrosDe(academiaId: string): Promise<Miembro[]> {
+  const { data, error } = await db()
+    .from("miembros")
+    .select("*")
+    .eq("academia_id", academiaId);
+  if (error) throw error;
+  return (data ?? []).map(miembroFromRow);
+}
+
+export async function crearMiembro(m: Miembro): Promise<void> {
+  const { error } = await db().from("miembros").insert({
+    id: m.id,
+    academia_id: m.academiaId,
+    email: m.email,
+    rol: m.rol,
+  });
+  if (error) throw error;
+}
+
+export async function eliminarMiembro(id: string): Promise<void> {
+  const { error } = await db().from("miembros").delete().eq("id", id);
   if (error) throw error;
 }
 

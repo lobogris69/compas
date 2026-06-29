@@ -29,6 +29,9 @@ export default function Config() {
   const [cDia, setCDia] = useState(1);
   const [cHora, setCHora] = useState("20:00");
 
+  // acceso de profesores
+  const [emailProf, setEmailProf] = useState("");
+
   if (store.ready && !academia)
     return (
       <main className="mx-auto grid min-h-dvh max-w-md place-items-center px-5 text-center">
@@ -61,6 +64,7 @@ export default function Config() {
     );
 
   const clases = store.clasesDe(academia.id);
+  const miembros = store.miembrosDe(academia.id);
 
   function set<K extends keyof ReglasBalance>(k: K, v: ReglasBalance[K]) {
     setReglas((prev) => (prev ? { ...prev, [k]: v } : prev));
@@ -71,6 +75,14 @@ export default function Config() {
     if (!academia || !reglas) return;
     store.actualizarAcademia(academia.id, { reglas });
     setGuardado(true);
+  }
+
+  function invitarProf() {
+    if (!academia) return;
+    const email = emailProf.trim();
+    if (!email || !email.includes("@")) return;
+    store.invitarMiembro(academia.id, email);
+    setEmailProf("");
   }
 
   function anadirClase() {
@@ -211,6 +223,58 @@ export default function Config() {
             Añadir clase
           </Button>
         </div>
+      </Card>
+
+      <Card className="mt-5">
+        <h2 className="font-bold">Profesores con acceso ({miembros.length})</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          Invita a tus profes por su email. Cuando entren con ese email podrán
+          subir vídeos y ver el estado de las clases (asistentes y equilibrio).
+          No pueden cambiar ajustes ni borrar la academia.
+        </p>
+
+        {miembros.length > 0 && (
+          <ul className="mt-3 divide-y divide-ink-100 dark:divide-ink-800">
+            {miembros.map((m) => (
+              <li
+                key={m.id}
+                className="flex items-center justify-between py-2 text-sm"
+              >
+                <span className="min-w-0 truncate">
+                  🧑‍🏫 <span className="font-medium">{m.email}</span>
+                </span>
+                <button
+                  onClick={() => store.quitarMiembro(m.id)}
+                  className="shrink-0 text-rose-600 hover:underline"
+                >
+                  Quitar
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-3 flex gap-2">
+          <Input
+            type="email"
+            value={emailProf}
+            onChange={(e) => setEmailProf(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                invitarProf();
+              }
+            }}
+            placeholder="profe@email.com"
+            className="flex-1"
+          />
+          <Button variant="secondary" onClick={invitarProf}>
+            Invitar
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-ink-500">
+          El profe debe registrarse en Compás con ese mismo email para acceder.
+        </p>
       </Card>
     </main>
   );

@@ -13,7 +13,7 @@ export default function Videoteca() {
   const { slug } = useParams<{ slug: string }>();
   const store = useStore();
   const academia = store.academiaPorSlug(slug);
-  const esDueno = academia ? store.soyDueno(academia.id) : false;
+  const puedeGestionar = academia ? store.puedeGestionar(academia.id) : false;
 
   const [busqueda, setBusqueda] = useState("");
   const [cat, setCat] = useState<string>("todas");
@@ -58,7 +58,7 @@ export default function Videoteca() {
         Clases, figuras y actuaciones para repasar cuando quieras.
       </p>
 
-      {esDueno && <AltaVideo academiaId={academia.id} />}
+      {puedeGestionar && <AltaVideo academiaId={academia.id} />}
 
       {/* Buscador */}
       <div className="mt-5">
@@ -90,7 +90,7 @@ export default function Videoteca() {
       {/* Lista */}
       <div className="mt-5 space-y-3">
         {filtrados.map((v) => (
-          <VideoCard key={v.id} video={v} esDueno={esDueno} />
+          <VideoCard key={v.id} video={v} puedeGestionar={puedeGestionar} />
         ))}
         {filtrados.length === 0 && (
           <Card>
@@ -104,7 +104,13 @@ export default function Videoteca() {
   );
 }
 
-function VideoCard({ video, esDueno }: { video: Video; esDueno: boolean }) {
+function VideoCard({
+  video,
+  puedeGestionar,
+}: {
+  video: Video;
+  puedeGestionar: boolean;
+}) {
   const store = useStore();
   const [editando, setEditando] = useState(false);
   const [titulo, setTitulo] = useState(video.titulo);
@@ -186,7 +192,7 @@ function VideoCard({ video, esDueno }: { video: Video; esDueno: boolean }) {
         >
           ⬇ Descargar
         </a>
-        {esDueno && (
+        {puedeGestionar && (
           <>
             <button
               onClick={() => setEditando(true)}

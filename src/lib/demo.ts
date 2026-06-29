@@ -8,6 +8,7 @@ import {
   type Asistencia,
   type Clase,
   type Matricula,
+  type Miembro,
   REGLAS_POR_DEFECTO,
   type Rol,
   type Video,
@@ -20,6 +21,7 @@ export interface DemoData {
   asistencias: Asistencia[];
   videos: Video[];
   matriculas: Matricula[];
+  miembros: Miembro[];
 }
 
 const NOMBRES_LEADER = [
@@ -224,5 +226,13 @@ export function crearDemo(): DemoData {
     ...NOMBRES_FOLLOWER.slice(4),
   ]);
 
-  return { academias: [academia], alumnos, clases, asistencias, videos, matriculas };
+  return {
+    academias: [academia],
+    alumnos,
+    clases,
+    asistencias,
+    videos,
+    matriculas,
+    miembros: [],
+  };
 }
