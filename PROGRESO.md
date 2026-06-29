@@ -2,6 +2,13 @@
 
 Registro de lo construido durante el desarrollo autónomo. Estado vivo.
 
+## 📌 Requisitos confirmados por el dueño
+- **Perfiles de alumno con datos básicos y foto** para que los miembros de una
+  clase / academia **se conozcan mejor entre ellos**. ✅ *Ya implementado*:
+  edición de perfil con foto en `/a/[slug]/perfil` (rol, nivel, Instagram, bio,
+  visibilidad opt-in) y **directorio de comunidad** en `/a/[slug]/alumnos`.
+  Detalle de diseño en `docs/academia-baile/06-perfiles-y-comunidad.md`.
+
 ## ✅ Hecho
 
 ### Cimientos
