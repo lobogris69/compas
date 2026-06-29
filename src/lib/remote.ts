@@ -38,6 +38,10 @@ function academiaFromRow(r: Record<string, unknown>): Academia {
       cupoRefuerzos: r.cupo_refuerzos as number,
       nivelesCompatibles: r.niveles_compatibles as boolean,
     },
+    ubicacion: (r.ubicacion as string) ?? "",
+    telefono: (r.telefono as string) ?? "",
+    logoUrl: (r.logo_url as string | null) ?? null,
+    profesores: (r.profesores as Academia["profesores"]) ?? [],
     ownerId: (r.owner as string | null) ?? null,
     createdAt: r.created_at as string,
   };
@@ -127,6 +131,10 @@ export async function crearAcademia(
       emoji: a.emoji,
       color: a.color,
       estilos: a.estilos,
+      ubicacion: a.ubicacion,
+      telefono: a.telefono,
+      logo_url: a.logoUrl,
+      profesores: a.profesores,
       owner: ownerId,
       ...reglasToRow(a.reglas),
     });

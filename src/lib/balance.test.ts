@@ -104,6 +104,10 @@ describe("sugerirRefuerzos", () => {
     color: "#000",
     estilos: ["Salsa"],
     reglas: { ...REGLAS_POR_DEFECTO },
+    ubicacion: "",
+    telefono: "",
+    logoUrl: null,
+    profesores: [],
     createdAt: "2026-01-01",
   };
 

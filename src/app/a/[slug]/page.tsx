@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { calcularBalance, estiloEstado } from "@/lib/balance";
 import { proximaFecha } from "@/lib/demo";
 import { BalanceBar, Button, Card, LinkButton, RolBadge } from "@/components/ui";
+import { AcademiaAvatar } from "@/components/academia-avatar";
 import { cn } from "@/lib/cn";
 import { DIAS_SEMANA } from "@/lib/types";
 
@@ -60,12 +61,10 @@ export default function HomeAlumno() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">
       <div className="flex items-center gap-3">
-        <div
-          className="grid h-11 w-11 place-items-center rounded-2xl text-xl"
-          style={{ background: `${academia.color}22` }}
-        >
-          {academia.emoji}
-        </div>
+        <AcademiaAvatar
+          academia={academia}
+          className="h-11 w-11 rounded-2xl text-xl"
+        />
         <div className="flex-1">
           <h1 className="text-lg font-extrabold">{academia.nombre}</h1>
           {yo ? (

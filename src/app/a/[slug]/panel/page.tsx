@@ -8,6 +8,7 @@ import { useStore } from "@/lib/store";
 import { calcularBalance, estiloEstado } from "@/lib/balance";
 import { proximaFecha } from "@/lib/demo";
 import { BalanceBar, Card, LinkButton } from "@/components/ui";
+import { AcademiaAvatar } from "@/components/academia-avatar";
 import { DIAS_SEMANA } from "@/lib/types";
 
 export default function PanelAcademia() {
@@ -50,12 +51,10 @@ export default function PanelAcademia() {
   return (
     <main className="mx-auto max-w-3xl px-5 py-8">
       <div className="flex items-center gap-3">
-        <div
-          className="grid h-12 w-12 place-items-center rounded-2xl text-2xl"
-          style={{ background: `${academia.color}22` }}
-        >
-          {academia.emoji}
-        </div>
+        <AcademiaAvatar
+          academia={academia}
+          className="h-12 w-12 rounded-2xl text-2xl"
+        />
         <div>
           <h1 className="text-xl font-extrabold">{academia.nombre}</h1>
           <p className="text-sm text-ink-500">

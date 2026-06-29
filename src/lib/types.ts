@@ -23,6 +23,12 @@ export const REGLAS_POR_DEFECTO: ReglasBalance = {
   nivelesCompatibles: true,
 };
 
+/** Profesor de la academia, con los estilos que imparte. */
+export interface Profesor {
+  nombre: string;
+  estilos: string[];
+}
+
 /** Academia = tenant. Aislada del resto. */
 export interface Academia {
   id: string;
@@ -32,6 +38,12 @@ export interface Academia {
   color: string;
   estilos: string[];
   reglas: ReglasBalance;
+  /** Datos de contacto / perfil público de la academia. */
+  ubicacion: string;
+  telefono: string;
+  /** Logo (dataURL en local, URL/Storage en nube). Si falta, se usa el emoji. */
+  logoUrl: string | null;
+  profesores: Profesor[];
   /** Dueño (auth.users.id) en modo nube; null/ausente en modo local. */
   ownerId?: string | null;
   createdAt: string;

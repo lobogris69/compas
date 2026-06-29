@@ -86,6 +86,13 @@ export function crearDemo(): DemoData {
     color: "#7c4dff",
     estilos: ["Salsa", "Bachata", "Kizomba"],
     reglas: { ...REGLAS_POR_DEFECTO },
+    ubicacion: "Calle del Compás 3, Madrid",
+    telefono: "600 123 456",
+    logoUrl: null,
+    profesores: [
+      { nombre: "Lucía", estilos: ["Salsa", "Bachata"] },
+      { nombre: "Diego", estilos: ["Kizomba"] },
+    ],
     createdAt: new Date().toISOString(),
   };
 

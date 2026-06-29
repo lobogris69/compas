@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { Card, LinkButton } from "@/components/ui";
+import { AcademiaAvatar } from "@/components/academia-avatar";
 import { DIAS_SEMANA } from "@/lib/types";
 
 // Página pública de la academia: su horario, para compartir en redes / web.
@@ -39,17 +40,52 @@ export default function Horarios() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">
       <div className="flex items-center gap-3">
-        <div
-          className="grid h-12 w-12 place-items-center rounded-2xl text-2xl"
-          style={{ background: `${academia.color}22` }}
-        >
-          {academia.emoji}
-        </div>
+        <AcademiaAvatar
+          academia={academia}
+          className="h-12 w-12 rounded-2xl text-2xl"
+        />
         <div>
           <h1 className="text-xl font-extrabold">{academia.nombre}</h1>
           <p className="text-sm text-ink-500">{academia.estilos.join(" · ")}</p>
         </div>
       </div>
+
+      {(academia.ubicacion ||
+        academia.telefono ||
+        (academia.profesores?.length ?? 0) > 0) && (
+        <Card className="mt-5 space-y-2 text-sm">
+          {academia.ubicacion && <p>📍 {academia.ubicacion}</p>}
+          {academia.telefono && (
+            <p>
+              📞{" "}
+              <a
+                href={`tel:${academia.telefono.replace(/\s+/g, "")}`}
+                className="text-brand-600 hover:underline"
+              >
+                {academia.telefono}
+              </a>
+            </p>
+          )}
+          {(academia.profesores?.length ?? 0) > 0 && (
+            <div>
+              <p className="font-semibold">Profesores</p>
+              <ul className="mt-1 space-y-0.5 text-ink-600 dark:text-ink-300">
+                {academia.profesores.map((p) => (
+                  <li key={p.nombre}>
+                    {p.nombre}
+                    {p.estilos.length > 0 && (
+                      <span className="text-ink-500">
+                        {" "}
+                        — {p.estilos.join(", ")}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
+      )}
 
       <h2 className="mb-3 mt-7 text-lg font-bold">Horario de clases</h2>
       <div className="space-y-5">
