@@ -12,9 +12,39 @@
 > | **3** | **Acceso de profesores**: el dueño invita por email; vista reducida (subir vídeos + ver estado). | ✅ hecho |
 > | **4** | **`/admin` de plataforma** (email del fundador): todas las academias y sus números. | ✅ hecho (solo lectura; suspender/borrar pendiente) |
 > | **5** | **Pagos**: planes configurables (mensual/trimestral/semestral/anual/bono) + control al día/pendiente + recordatorios WhatsApp manuales. | ✅ hecho (envío automático programado: pendiente, necesita API WhatsApp) |
+> | **6** | **Reservas de clases y talleres** (idea). | ⏳ propuesto |
 >
 > El motor de balance/refuerzos (déficit, nivel compatible, aviso WhatsApp, "Apuntar")
 > ya está implementado en `src/lib/balance.ts` y la pantalla de clase.
+
+## Fase 6 — Reservas de clases y talleres (propuesta)
+
+Página **pública de reserva** para que un asistente reserve y pague una clase/taller.
+Reutiliza mucho de lo hecho (Storage, modelo de pagos, avisos).
+
+**1. Taller/clase reservable (lo crea la academia)**
+- Como una clase pero puede ser **evento puntual** (con su fecha). Campos: nombre,
+  día(s)/horario, **duración**, **importe** y un **cartel** (archivo gráfico → Storage,
+  mismo mecanismo que logos/vídeos). Días/horario/nombre pueden **precargarse** de las
+  clases existentes.
+
+**2. Reserva (la hace el asistente)**
+- Elige el taller de un desplegable (ve duración, horario, importe, cartel).
+- Rellena sus datos (nombre, teléfono/email) e indica **pago: Bizum o transferencia**.
+
+**3. Cierre y aviso**
+- Queda una **reserva registrada** que la academia ve **ordenada** en su panel (por
+  taller, estado pagado/pendiente). Se puede avisar (in-app y/o WhatsApp).
+
+**Matiz honesto (pago):** la app **no cobra automáticamente**. Se muestra el
+**Bizum/IBAN** de la academia + importe; el asistente paga por su cuenta y
+(opcional) **sube justificante** (Storage); la academia **confirma** el cobro. El
+cobro automático real requeriría una **pasarela** (p. ej. Stripe) — fase aparte.
+
+**Piezas técnicas estimadas:** nueva entidad `talleres` (o extender clases con
+`esEvento`/`fecha`/`duracion`/`importe`/`cartel_url`); tabla `reservas`
+(taller, datos del asistente, método de pago, estado, justificante_url); bucket
+Storage `carteles`/`justificantes`; página pública de reserva + gestión en el panel.
 
 ---
 
