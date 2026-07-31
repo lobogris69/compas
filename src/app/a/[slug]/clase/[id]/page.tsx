@@ -105,11 +105,21 @@ export default function DetalleClase() {
             nivel {clase.nivel}
           </p>
         </div>
-        <span
-          className={`rounded-full px-3 py-1 text-sm font-semibold ${est.clase}`}
-        >
-          {est.emoji} {est.label}
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-sm font-semibold ${est.clase}`}
+          >
+            {est.emoji} {est.label}
+          </span>
+          {puedeGestionar && (
+            <Link
+              href={`/a/${slug}/clase/${id}/lista`}
+              className="rounded-xl bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              ✓ Pasar lista
+            </Link>
+          )}
+        </div>
       </div>
 
       <Card className="mt-5">

@@ -166,6 +166,7 @@ export function crearDemo(): DemoData {
       estado: "si",
       rolEnClase: null,
       esRefuerzo: false,
+      asistio: null,
       updatedAt: new Date().toISOString(),
     };
   });

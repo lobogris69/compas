@@ -122,6 +122,7 @@ function asistenciaFromRow(r: Record<string, unknown>): Asistencia {
     estado: r.estado as EstadoAsistencia,
     rolEnClase: (r.rol_en_clase as Asistencia["rolEnClase"]) ?? null,
     esRefuerzo: (r.es_refuerzo as boolean) ?? false,
+    asistio: (r.asistio as boolean | null) ?? null,
     updatedAt: r.updated_at as string,
   };
 }
@@ -648,6 +649,28 @@ export async function eliminarPago(id: string): Promise<void> {
     .select("id");
   if (error) throw error;
   exigirFilas(data, "borrar el pago");
+}
+
+/**
+ * Marca si un alumno vino a una sesión concreta. Va por función en la base de
+ * datos porque `asistio` no es escribible desde el cliente: el dato debe ser
+ * fiable (nadie puede marcarse presente a sí mismo) para que sirva de histórico.
+ */
+export async function marcarAsistencia(
+  academiaId: string,
+  claseId: string,
+  alumnoId: string,
+  fecha: string,
+  vino: boolean,
+): Promise<void> {
+  const { error } = await db().rpc("marcar_asistencia", {
+    aid: academiaId,
+    cid: claseId,
+    alid: alumnoId,
+    f: fecha,
+    vino,
+  });
+  if (error) throw error;
 }
 
 export async function asistenciasDeAcademia(

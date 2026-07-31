@@ -98,6 +98,8 @@ export interface Asistencia {
   estado: EstadoAsistencia;
   rolEnClase: Rol | null; // rol asignado en esta sesión (para "ambos")
   esRefuerzo: boolean;
+  /** ¿Vino de verdad? null mientras no se haya pasado lista. */
+  asistio: boolean | null;
   updatedAt: string;
 }
 

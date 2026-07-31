@@ -150,6 +150,19 @@ interface StoreValue {
     },
   ) => void;
   asistenciasDe: (claseId: string, fecha: string) => Asistencia[];
+  /** Pasar lista: marca si un alumno vino de verdad (solo dueño/profesor). */
+  marcarAsistencia: (
+    academiaId: string,
+    claseId: string,
+    alumnoId: string,
+    fecha: string,
+    vino: boolean,
+  ) => void;
+  /**
+   * Historial de asistencia de un alumno: de las veces que se le pasó lista,
+   * cuántas vino. Es la base para predecir el balance antes de la clase.
+   */
+  fiabilidadDe: (alumnoId: string) => { vino: number; total: number } | null;
   reset: () => void;
   cargarDemo: () => void;
 }
@@ -696,12 +709,56 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           estado: input.estado,
           rolEnClase: null,
           esRefuerzo: input.esRefuerzo ?? false,
+          asistio: null,
           updatedAt: new Date().toISOString(),
         };
         return { ...prev, asistencias: [...prev.asistencias, nueva] };
       });
     },
     [update],
+  );
+
+  const marcarAsistencia: StoreValue["marcarAsistencia"] = useCallback(
+    (academiaId, claseId, alumnoId, fecha, vino) => {
+      update((prev) => {
+        const existe = prev.asistencias.find(
+          (a) =>
+            a.claseId === claseId &&
+            a.alumnoId === alumnoId &&
+            a.fecha === fecha,
+        );
+        if (existe) {
+          return {
+            ...prev,
+            asistencias: prev.asistencias.map((a) =>
+              a.id === existe.id
+                ? { ...a, asistio: vino, updatedAt: new Date().toISOString() }
+                : a,
+            ),
+          };
+        }
+        // Alguien que aparece sin haber contestado: se crea su fila.
+        const nueva: Asistencia = {
+          id: newId(),
+          academiaId,
+          claseId,
+          alumnoId,
+          fecha,
+          estado: vino ? "si" : "no",
+          rolEnClase: null,
+          esRefuerzo: false,
+          asistio: vino,
+          updatedAt: new Date().toISOString(),
+        };
+        return { ...prev, asistencias: [...prev.asistencias, nueva] };
+      });
+      if (MODE === "supabase") {
+        encolar(() =>
+          remote.marcarAsistencia(academiaId, claseId, alumnoId, fecha, vino),
+        );
+      }
+    },
+    [update, encolar],
   );
 
   const cargarAcademia: StoreValue["cargarAcademia"] = useCallback(
@@ -850,6 +907,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         db.asistencias.filter(
           (a) => a.claseId === claseId && a.fecha === fecha,
         ),
+      marcarAsistencia,
+      fiabilidadDe: (alumnoId) => {
+        const pasadas = db.asistencias.filter(
+          (a) => a.alumnoId === alumnoId && a.asistio !== null,
+        );
+        if (pasadas.length === 0) return null;
+        return {
+          vino: pasadas.filter((a) => a.asistio).length,
+          total: pasadas.length,
+        };
+      },
       reset: () => {
         update(() => VACIO);
       },
@@ -878,6 +946,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       crearClase,
       matricular,
       desmatricular,
+      marcarAsistencia,
       cargarTelefonos,
       invitarMiembro,
       quitarMiembro,
