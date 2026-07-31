@@ -13,6 +13,9 @@
 > | **4** | **`/admin` de plataforma** (email del fundador): todas las academias y sus números. | ✅ hecho (solo lectura; suspender/borrar pendiente) |
 > | **5** | **Pagos**: planes configurables (mensual/trimestral/semestral/anual/bono) + control al día/pendiente + recordatorios WhatsApp manuales. | ✅ hecho (envío automático programado: pendiente, necesita API WhatsApp) |
 > | **6** | **Reservas de clases y talleres** (idea). | ⏳ propuesto |
+> | **S** | **Seguridad**: RLS y Storage cerrados; login de alumno por enlace mágico; email y teléfono protegidos por permisos de columna + función con comprobación de equipo. | ✅ hecho |
+> | **7** | **Asistencia real** ("pasar lista"): quién vino de verdad, con `asistio` solo escribible por dueño/profesor. Base del histórico y de la predicción. | ✅ hecho |
+> | **8** | **Motor predictivo**: propensión por alumno y día, refuerzos ordenados por probabilidad de aceptar, antispam de avisos, y conectar el "avisar 3h antes". | ⏳ siguiente |
 >
 > El motor de balance/refuerzos (déficit, nivel compatible, aviso WhatsApp, "Apuntar")
 > ya está implementado en `src/lib/balance.ts` y la pantalla de clase.
