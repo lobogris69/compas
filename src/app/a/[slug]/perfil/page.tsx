@@ -24,6 +24,7 @@ export default function MiPerfil() {
     : undefined;
   const fileRef = useRef<HTMLInputElement>(null);
   const [guardado, setGuardado] = useState(false);
+  const [aviso, setAviso] = useState("");
 
   if (!store.ready) return null;
 
@@ -62,9 +63,19 @@ export default function MiPerfil() {
   const todasClases = store.clasesDe(academia.id);
   const misClaseIds = new Set(store.clasesDeAlumno(yo.id).map((c) => c.id));
 
+  // En modo nube quitarse de una clase lo hace el profe: sin login de alumno no
+  // podemos comprobar que quien borra es el interesado, y dejarlo abierto
+  // permitía vaciar las matrículas de cualquier academia (ver 0010_seguridad.sql).
+  const puedeQuitarse = store.mode === "local";
+
   function toggleMiClase(claseId: string) {
     if (!academia || !yo) return;
     if (misClaseIds.has(claseId)) {
+      if (!puedeQuitarse) {
+        setAviso("Para quitarte de una clase, díselo a tu profe.");
+        setTimeout(() => setAviso(""), 2500);
+        return;
+      }
       store.desmatricular(yo.id, claseId);
     } else {
       store.matricular(academia.id, yo.id, claseId);
@@ -195,6 +206,11 @@ export default function MiPerfil() {
                 Marca a las que vas. Puedes ir a varias.
               </p>
             </div>
+            {aviso && (
+              <p className="rounded-xl bg-amber-100 px-3 py-2 text-sm text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                {aviso}
+              </p>
+            )}
             {todasClases.map((c) => {
               const sel = misClaseIds.has(c.id);
               return (

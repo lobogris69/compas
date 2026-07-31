@@ -3,12 +3,33 @@
 
 import { getSupabase } from "./supabase";
 import { newId } from "./slug";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const BUCKET_LOGOS = "logos";
 const BUCKET_VIDEOS = "videos";
 
 /** Límite de tamaño para vídeos subidos (debe coincidir con el del bucket). */
 export const LIMITE_VIDEO_MB = 100;
+
+/**
+ * Ruta del archivo dentro del bucket: `<uuid del usuario>/<id>.<ext>`.
+ * La primera carpeta es la identidad de quien sube, y las políticas de Storage
+ * (0010_seguridad.sql) solo le dejan modificar o borrar lo que hay dentro de
+ * ella. Sin esto, cualquier usuario registrado podría borrar los archivos de
+ * cualquier academia.
+ */
+async function rutaPropia(
+  supabase: SupabaseClient,
+  file: File,
+  extPorDefecto: string,
+): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    throw new Error("Inicia sesión para subir archivos.");
+  }
+  const ext = file.name.split(".").pop()?.toLowerCase() || extPorDefecto;
+  return `${data.user.id}/${newId()}.${ext}`;
+}
 
 /**
  * Sube una imagen de logo y devuelve su URL pública.
@@ -18,8 +39,7 @@ export async function subirLogo(file: File): Promise<string> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("Supabase no está configurado");
 
-  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-  const path = `${newId()}.${ext}`;
+  const path = await rutaPropia(supabase, file, "png");
 
   const { error } = await supabase.storage
     .from(BUCKET_LOGOS)
@@ -41,8 +61,7 @@ export async function subirVideo(file: File): Promise<string> {
     throw new Error(`El vídeo supera el límite de ${LIMITE_VIDEO_MB} MB`);
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-  const path = `${newId()}.${ext}`;
+  const path = await rutaPropia(supabase, file, "mp4");
 
   const { error } = await supabase.storage
     .from(BUCKET_VIDEOS)
