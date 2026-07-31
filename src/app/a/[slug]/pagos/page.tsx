@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { Button, Card, Input } from "@/components/ui";
 import { cn } from "@/lib/cn";
@@ -50,6 +50,15 @@ export default function Pagos() {
   const academia = store.academiaPorSlug(slug);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [telEdit, setTelEdit] = useState("");
+
+  // Los teléfonos no vienen con el alumno (dato protegido): se piden aparte y
+  // solo llegan si eres del equipo de la academia.
+  const academiaId = academia?.id;
+  const puedeGestionar = academiaId ? store.puedeGestionar(academiaId) : false;
+  useEffect(() => {
+    if (academiaId && puedeGestionar) store.cargarTelefonos(academiaId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [academiaId, puedeGestionar]);
 
   if (!store.ready) return null;
   if (!academia)

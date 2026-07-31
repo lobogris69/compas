@@ -192,11 +192,12 @@ export async function actualizarRecordatorio(
 
 // ───────────────────────── Alumnos ─────────────────────────
 
-// Columnas que la app necesita del alumno. `email` queda fuera a propósito: es
-// dato personal, `anon` no tiene permiso sobre esa columna (0011) y la app no lo
-// usa en el cliente — vincular la ficha con la cuenta se resuelve en servidor.
+// Columnas públicas del alumno. `email` y `telefono` quedan fuera a propósito:
+// son datos de contacto y nadie tiene permiso de lectura sobre esas columnas
+// (0011 y 0012). El email solo se usa en servidor para vincular la ficha; los
+// teléfonos se piden aparte con `telefonosDe`, que comprueba que eres del equipo.
 const COLS_ALUMNO =
-  "id,academia_id,user_id,nombre,rol,nivel,sexo,telefono,estilos,foto_url,bio,bailando_desde,instagram,visibilidad,created_at";
+  "id,academia_id,user_id,nombre,rol,nivel,sexo,estilos,foto_url,bio,bailando_desde,instagram,visibilidad,created_at";
 
 export async function alumnosDe(academiaId: string): Promise<Alumno[]> {
   const { data, error } = await db()
@@ -235,6 +236,26 @@ export async function crearAlumno(a: Alumno): Promise<void> {
     );
   }
   if (error) throw error;
+}
+
+/**
+ * Teléfonos de los alumnos de una academia. Solo devuelve algo si quien pregunta
+ * es el dueño o un profesor (lo comprueba la función en la base de datos); para
+ * cualquier otro viene vacío. Se pide aparte del resto del alumno porque el
+ * teléfono no es legible en la tabla.
+ */
+export async function telefonosDe(
+  academiaId: string,
+): Promise<Record<string, string>> {
+  const { data, error } = await db().rpc("telefonos_academia", {
+    aid: academiaId,
+  });
+  if (error) throw error;
+  const out: Record<string, string> = {};
+  for (const fila of (data ?? []) as { alumno_id: string; telefono: string }[]) {
+    out[fila.alumno_id] = fila.telefono ?? "";
+  }
+  return out;
 }
 
 /**

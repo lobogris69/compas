@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import {
   asignarRolesEfectivos,
@@ -29,6 +29,15 @@ export default function DetalleClase() {
 
   const fecha = clase ? proximaFecha(clase.diaSemana) : "";
   const alumnos = academia ? store.alumnosDe(academia.id) : [];
+
+  // Para avisar a refuerzos por WhatsApp hacen falta los teléfonos, que solo
+  // recibe el equipo de la academia (dato protegido, ver 0012_telefonos.sql).
+  const academiaId = academia?.id;
+  const puedeGestionar = academiaId ? store.puedeGestionar(academiaId) : false;
+  useEffect(() => {
+    if (academiaId && puedeGestionar) store.cargarTelefonos(academiaId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [academiaId, puedeGestionar]);
 
   const datos = useMemo(() => {
     if (!academia || !clase) return null;
@@ -180,7 +189,11 @@ export default function DetalleClase() {
                       alumno.nombre,
                       balance.faltan!.rol,
                     ),
-                    alumno.instagram ?? undefined,
+                    // El teléfono, no el Instagram: `enlaceWhatsApp` se queda
+                    // con los dígitos, así que un handle como "@lucia92"
+                    // generaba el número 92. Si no hay teléfono, se abre
+                    // WhatsApp para elegir contacto a mano.
+                    alumno.telefono || undefined,
                   )}
                   target="_blank"
                   rel="noopener noreferrer"

@@ -100,6 +100,12 @@ interface StoreValue {
   esProfesor: (academiaId: string) => boolean;
   /** ¿Puedo gestionar (subir vídeos, ver estado)? Dueño o profesor. */
   puedeGestionar: (academiaId: string) => boolean;
+  /**
+   * Carga los teléfonos de los alumnos (solo dueño/profesor). No vienen con el
+   * resto del alumno porque son dato de contacto protegido. Llámalo desde las
+   * pantallas de gestión que los necesiten.
+   */
+  cargarTelefonos: (academiaId: string) => void;
   // Miembros (profesores con acceso)
   invitarMiembro: (academiaId: string, email: string) => void;
   quitarMiembro: (id: string) => void;
@@ -542,6 +548,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [db.matriculas, update, encolar],
   );
 
+  const telefonosPedidos = useRef<Set<string>>(new Set());
+  const cargarTelefonos: StoreValue["cargarTelefonos"] = useCallback(
+    (academiaId) => {
+      if (MODE !== "supabase") return;
+      if (telefonosPedidos.current.has(academiaId)) return;
+      telefonosPedidos.current.add(academiaId);
+      remote
+        .telefonosDe(academiaId)
+        .then((mapa) => {
+          if (Object.keys(mapa).length === 0) return;
+          update((prev) => ({
+            ...prev,
+            alumnos: prev.alumnos.map((a) =>
+              mapa[a.id] !== undefined ? { ...a, telefono: mapa[a.id] } : a,
+            ),
+          }));
+        })
+        .catch((e) => {
+          // No es crítico: sin teléfonos la pantalla sigue siendo usable.
+          telefonosPedidos.current.delete(academiaId);
+          console.error("cargarTelefonos", e);
+        });
+    },
+    [update],
+  );
+
   const invitarMiembro: StoreValue["invitarMiembro"] = useCallback(
     (academiaId, email) => {
       const correo = email.trim().toLowerCase();
@@ -765,6 +797,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             m.academiaId === academiaId && m.email.toLowerCase() === email,
         );
       },
+      cargarTelefonos,
       invitarMiembro,
       quitarMiembro,
       miembrosDe: (academiaId) =>
@@ -845,6 +878,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       crearClase,
       matricular,
       desmatricular,
+      cargarTelefonos,
       invitarMiembro,
       quitarMiembro,
       crearPlan,
