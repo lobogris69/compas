@@ -84,6 +84,10 @@ interface StoreValue {
   cargarAcademia: (slug: string) => Promise<void>;
   /** ¿Se está cargando esa academia desde la nube? */
   cargandoAcademia: (slug: string) => boolean;
+  /** Último fallo al guardar en la nube (null si todo va bien). */
+  errorGuardado: string | null;
+  /** Descarta el aviso de fallo al guardar. */
+  descartarError: () => void;
   // Academias
   crearAcademia: (a: Omit<Academia, "id" | "createdAt">) => Academia;
   actualizarAcademia: (id: string, patch: Partial<Academia>) => void;
@@ -184,6 +188,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [owned, setOwned] = useState<string[]>([]);
   const [cargando, setCargando] = useState<string[]>([]); // slugs cargándose (nube)
   const [ready, setReady] = useState(false);
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
 
   useEffect(() => {
     setYo(loadYo());
@@ -213,6 +218,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setReady(true);
   }, []);
 
+  // Recalcula de qué academias soy dueño cada vez que cambia la sesión o llegan
+  // academias nuevas a memoria. Antes la propiedad solo se marcaba en el momento
+  // exacto en que terminaba `cargarAcademia`: si la sesión aún no había resuelto
+  // (muy habitual, porque en modo nube `ready` es true al instante), el dueño se
+  // quedaba sin Ajustes, sin Pagos y sin zona de peligro hasta recargar entera
+  // la página — y navegar no lo arreglaba, porque la academia ya estaba en caché.
+  useEffect(() => {
+    if (MODE !== "supabase") return;
+    const uid = auth.user?.id;
+    if (!uid) return;
+    const mios = db.academias.filter((a) => a.ownerId === uid).map((a) => a.id);
+    if (mios.length === 0) return;
+    setOwned((prev) => {
+      const faltan = mios.filter((id) => !prev.includes(id));
+      return faltan.length ? [...prev, ...faltan] : prev;
+    });
+  }, [auth.user, db.academias]);
+
   const persist = (next: DB) => {
     // En modo nube la verdad está en Supabase; no cacheamos datos en localStorage.
     if (MODE !== "local") return;
@@ -232,10 +255,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Cola de escrituras remotas (modo nube). Serializa los writes a Supabase en
   // el orden en que se piden, para que la academia padre exista antes que sus
   // hijos (clases, alumnos, vídeos, asistencias) y no se viole la clave foránea.
-  // Cada write registra sus propios errores y nunca bloquea a los siguientes.
+  //
+  // Si una escritura falla NO se traga el error: se guarda en `errorGuardado`
+  // para que la UI avise. Antes la pantalla decía "guardado" y al recargar el
+  // dato no existía, porque en modo nube no cacheamos nada en localStorage.
   const colaRemota = useRef<Promise<unknown>>(Promise.resolve());
   const encolar = useCallback((fn: () => Promise<unknown>) => {
-    const run = () => fn().catch(console.error);
+    const run = () =>
+      fn().catch((e: unknown) => {
+        console.error(e);
+        const msg =
+          e instanceof Error ? e.message : typeof e === "string" ? e : "";
+        setErrorGuardado(
+          msg
+            ? `No se pudo guardar en la nube: ${msg}`
+            : "No se pudo guardar en la nube. Revisa tu conexión y vuelve a intentarlo.",
+        );
+      });
     colaRemota.current = colaRemota.current.then(run, run);
     return colaRemota.current;
   }, []);
@@ -424,79 +460,75 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const matricular: StoreValue["matricular"] = useCallback(
     (academiaId, alumnoId, claseId) => {
-      let nueva: Matricula | null = null;
-      update((prev) => {
-        // Evita duplicados (mismo alumno + clase).
-        if (
-          prev.matriculas.some(
-            (m) => m.alumnoId === alumnoId && m.claseId === claseId,
-          )
-        ) {
-          return prev;
-        }
-        nueva = {
-          id: newId(),
-          academiaId,
-          claseId,
-          alumnoId,
-          createdAt: new Date().toISOString(),
-        };
-        return { ...prev, matriculas: [...prev.matriculas, nueva] };
-      });
-      if (MODE === "supabase" && nueva)
-        encolar(() => remote.crearMatricula(nueva!));
+      // Decidir FUERA del updater: React solo garantiza ejecutarlo de forma
+      // síncrona en el caso optimizado, así que leer una variable asignada
+      // dentro perdía la escritura (la matrícula no llegaba nunca a Supabase).
+      if (
+        db.matriculas.some(
+          (m) => m.alumnoId === alumnoId && m.claseId === claseId,
+        )
+      ) {
+        return; // ya matriculado
+      }
+      const nueva: Matricula = {
+        id: newId(),
+        academiaId,
+        claseId,
+        alumnoId,
+        createdAt: new Date().toISOString(),
+      };
+      update((prev) =>
+        prev.matriculas.some(
+          (m) => m.alumnoId === alumnoId && m.claseId === claseId,
+        )
+          ? prev
+          : { ...prev, matriculas: [...prev.matriculas, nueva] },
+      );
+      if (MODE === "supabase") encolar(() => remote.crearMatricula(nueva));
     },
-    [update, encolar],
+    [db.matriculas, update, encolar],
   );
 
   const desmatricular: StoreValue["desmatricular"] = useCallback(
     (alumnoId, claseId) => {
-      let quitarId: string | null = null;
-      update((prev) => {
-        const m = prev.matriculas.find(
-          (x) => x.alumnoId === alumnoId && x.claseId === claseId,
-        );
-        if (!m) return prev;
-        quitarId = m.id;
-        return {
-          ...prev,
-          matriculas: prev.matriculas.filter((x) => x.id !== m.id),
-        };
-      });
-      if (MODE === "supabase" && quitarId)
-        encolar(() => remote.eliminarMatricula(quitarId!));
+      const m = db.matriculas.find(
+        (x) => x.alumnoId === alumnoId && x.claseId === claseId,
+      );
+      if (!m) return;
+      update((prev) => ({
+        ...prev,
+        matriculas: prev.matriculas.filter((x) => x.id !== m.id),
+      }));
+      if (MODE === "supabase") encolar(() => remote.eliminarMatricula(m.id));
     },
-    [update, encolar],
+    [db.matriculas, update, encolar],
   );
 
   const invitarMiembro: StoreValue["invitarMiembro"] = useCallback(
     (academiaId, email) => {
       const correo = email.trim().toLowerCase();
       if (!correo) return;
-      let nuevo: Miembro | null = null;
-      update((prev) => {
-        if (
-          prev.miembros.some(
-            (m) =>
-              m.academiaId === academiaId &&
-              m.email.toLowerCase() === correo,
-          )
-        ) {
-          return prev;
-        }
-        nuevo = {
-          id: newId(),
-          academiaId,
-          email: correo,
-          rol: "profesor",
-          createdAt: new Date().toISOString(),
-        };
-        return { ...prev, miembros: [...prev.miembros, nuevo] };
-      });
-      if (MODE === "supabase" && nuevo)
-        encolar(() => remote.crearMiembro(nuevo!));
+      const yaEsta = db.miembros.some(
+        (m) => m.academiaId === academiaId && m.email.toLowerCase() === correo,
+      );
+      if (yaEsta) return;
+      const nuevo: Miembro = {
+        id: newId(),
+        academiaId,
+        email: correo,
+        rol: "profesor",
+        createdAt: new Date().toISOString(),
+      };
+      update((prev) =>
+        prev.miembros.some(
+          (m) => m.academiaId === academiaId && m.email.toLowerCase() === correo,
+        )
+          ? prev
+          : { ...prev, miembros: [...prev.miembros, nuevo] },
+      );
+      if (MODE === "supabase") encolar(() => remote.crearMiembro(nuevo));
     },
-    [update, encolar],
+    [db.miembros, update, encolar],
   );
 
   const quitarMiembro: StoreValue["quitarMiembro"] = useCallback(
@@ -671,6 +703,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       mode: MODE,
       cargarAcademia,
       cargandoAcademia: (slug) => cargando.includes(slug),
+      errorGuardado,
+      descartarError: () => setErrorGuardado(null),
       crearAcademia,
       actualizarAcademia,
       eliminarAcademia,
@@ -758,6 +792,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       yo,
       owned,
       cargando,
+      errorGuardado,
       cargarAcademia,
       crearAcademia,
       actualizarAcademia,

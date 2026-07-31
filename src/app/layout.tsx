@@ -3,6 +3,7 @@ import "./globals.css";
 import { StoreProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/auth";
 import { SessionBar } from "@/components/session-bar";
+import { AvisoGuardado } from "@/components/aviso-guardado";
 
 export const metadata: Metadata = {
   title: "Compás — cuadra tus clases de baile",
@@ -27,6 +28,7 @@ export default function RootLayout({
         <AuthProvider>
           <StoreProvider>
             <SessionBar />
+            <AvisoGuardado />
             {children}
           </StoreProvider>
         </AuthProvider>

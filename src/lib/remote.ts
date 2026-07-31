@@ -26,6 +26,19 @@ function db() {
   return s;
 }
 
+/**
+ * Cuando RLS bloquea un UPDATE o un DELETE, Postgres NO da error: simplemente
+ * no afecta a ninguna fila y la petición devuelve éxito. Eso hacía que la app
+ * dijera "guardado" mientras el dato se descartaba en silencio. Pedimos las
+ * filas afectadas (`.select()`) y, si no hay ninguna, lo convertimos en error
+ * para que la UI pueda avisar.
+ */
+function exigirFilas(filas: unknown[] | null, accion: string): void {
+  if (!filas || filas.length === 0) {
+    throw new Error(`no tienes permiso para ${accion} (o el dato ya no existe)`);
+  }
+}
+
 // ───────────────────────── Mappers ─────────────────────────
 
 function academiaFromRow(r: Record<string, unknown>): Academia {
@@ -153,22 +166,26 @@ export async function actualizarReglas(
   academiaId: string,
   reglas: ReglasBalance,
 ): Promise<void> {
-  const { error } = await db()
+  const { data, error } = await db()
     .from("academias")
     .update(reglasToRow(reglas))
-    .eq("id", academiaId);
+    .eq("id", academiaId)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "guardar las reglas de la academia");
 }
 
 export async function actualizarRecordatorio(
   academiaId: string,
   texto: string,
 ): Promise<void> {
-  const { error } = await db()
+  const { data, error } = await db()
     .from("academias")
     .update({ recordatorio_pago: texto })
-    .eq("id", academiaId);
+    .eq("id", academiaId)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "guardar el mensaje de recordatorio");
 }
 
 // ───────────────────────── Alumnos ─────────────────────────
@@ -220,8 +237,13 @@ export async function actualizarAlumno(
   if (patch.instagram !== undefined) row.instagram = patch.instagram;
   if (patch.visibilidad !== undefined) row.visibilidad = patch.visibilidad;
   if (Object.keys(row).length === 0) return;
-  const { error } = await db().from("alumnos").update(row).eq("id", id);
+  const { data, error } = await db()
+    .from("alumnos")
+    .update(row)
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "guardar los datos del alumno");
 }
 
 // ───────────────────────── Clases ─────────────────────────
@@ -268,15 +290,25 @@ export async function asistenciasDe(
 }
 
 export async function eliminarAlumno(id: string): Promise<void> {
-  const { error } = await db().from("alumnos").delete().eq("id", id);
+  const { data, error } = await db()
+    .from("alumnos")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "dar de baja al alumno");
 }
 
 // Borra la academia. La BD elimina en cascada clases, alumnos, asistencias y
 // vídeos (on delete cascade). RLS exige ser el dueño.
 export async function eliminarAcademia(id: string): Promise<void> {
-  const { error } = await db().from("academias").delete().eq("id", id);
+  const { data, error } = await db()
+    .from("academias")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "borrar la academia");
 }
 
 // Lista TODAS las academias con sus conteos (panel de plataforma). La lectura
@@ -354,13 +386,23 @@ export async function actualizarVideo(
   if (patch.descripcion !== undefined) row.descripcion = patch.descripcion;
   if (patch.url !== undefined) row.url = patch.url;
   if (Object.keys(row).length === 0) return;
-  const { error } = await db().from("videos").update(row).eq("id", id);
+  const { data, error } = await db()
+    .from("videos")
+    .update(row)
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "guardar el vídeo");
 }
 
 export async function eliminarVideo(id: string): Promise<void> {
-  const { error } = await db().from("videos").delete().eq("id", id);
+  const { data, error } = await db()
+    .from("videos")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "borrar el vídeo");
 }
 
 // ───────────────────────── Matrículas ─────────────────────────
@@ -395,8 +437,13 @@ export async function crearMatricula(m: Matricula): Promise<void> {
 }
 
 export async function eliminarMatricula(id: string): Promise<void> {
-  const { error } = await db().from("matriculas").delete().eq("id", id);
+  const { data, error } = await db()
+    .from("matriculas")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "quitar la matrícula");
 }
 
 // ───────────────────────── Miembros (profesores) ─────────────────────────
@@ -431,8 +478,13 @@ export async function crearMiembro(m: Miembro): Promise<void> {
 }
 
 export async function eliminarMiembro(id: string): Promise<void> {
-  const { error } = await db().from("miembros").delete().eq("id", id);
+  const { data, error } = await db()
+    .from("miembros")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "quitar el acceso del profesor");
 }
 
 // ───────────────────────── Planes de pago ─────────────────────────
@@ -474,8 +526,13 @@ export async function crearPlan(p: PlanPago): Promise<void> {
 }
 
 export async function eliminarPlan(id: string): Promise<void> {
-  const { error } = await db().from("planes_pago").delete().eq("id", id);
+  const { data, error } = await db()
+    .from("planes_pago")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "borrar el plan");
 }
 
 // ───────────────────────── Pagos ─────────────────────────
@@ -524,8 +581,13 @@ export async function crearPago(p: Pago): Promise<void> {
 }
 
 export async function eliminarPago(id: string): Promise<void> {
-  const { error } = await db().from("pagos").delete().eq("id", id);
+  const { data, error } = await db()
+    .from("pagos")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  exigirFilas(data, "borrar el pago");
 }
 
 export async function asistenciasDeAcademia(
