@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
@@ -17,6 +18,7 @@ import {
 export default function MiPerfil() {
   const { slug } = useParams<{ slug: string }>();
   const store = useStore();
+  const auth = useAuth();
   const academia = store.academiaPorSlug(slug);
   const yoId = academia ? store.yoEn(academia.id) : null;
   const yo = academia
@@ -63,10 +65,12 @@ export default function MiPerfil() {
   const todasClases = store.clasesDe(academia.id);
   const misClaseIds = new Set(store.clasesDeAlumno(yo.id).map((c) => c.id));
 
-  // En modo nube quitarse de una clase lo hace el profe: sin login de alumno no
-  // podemos comprobar que quien borra es el interesado, y dejarlo abierto
-  // permitía vaciar las matrículas de cualquier academia (ver 0010_seguridad.sql).
-  const puedeQuitarse = store.mode === "local";
+  // Quitarse de una clase requiere que sepamos que eres tú: en local vale la
+  // identidad del navegador; en la nube, tener la ficha vinculada a tu cuenta
+  // (login por enlace). Si no, lo hace el profe — dejarlo abierto a anónimos
+  // permitía vaciar las matrículas de cualquier academia (0010_seguridad.sql).
+  const vinculado = !!yo.userId && yo.userId === auth.user?.id;
+  const puedeQuitarse = store.mode === "local" || vinculado;
 
   function toggleMiClase(claseId: string) {
     if (!academia || !yo) return;
@@ -95,6 +99,37 @@ export default function MiPerfil() {
       </p>
 
       <div className="mt-5 space-y-4">
+        {store.mode === "supabase" && (
+          <Card
+            className={
+              vinculado
+                ? "border-emerald-300 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/30"
+                : "border-amber-300 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/30"
+            }
+          >
+            {vinculado ? (
+              <p className="text-sm text-emerald-800 dark:text-emerald-300">
+                ✅ <b>Cuenta vinculada.</b> Puedes entrar desde cualquier móvil
+                con tu email y tus cambios se guardan.
+              </p>
+            ) : (
+              <div className="text-sm text-amber-900 dark:text-amber-200">
+                <p>
+                  ⚠️ <b>Solo te reconoce este navegador.</b> Si borras los datos
+                  o cambias de móvil, perderás tu ficha — y de momento tus
+                  cambios de perfil no se guardan.
+                </p>
+                <Link
+                  href="/entrar"
+                  className="mt-2 inline-block font-semibold underline"
+                >
+                  Entrar con mi email para vincularla →
+                </Link>
+              </div>
+            )}
+          </Card>
+        )}
+
         <Card className="flex items-center gap-4">
           <button
             onClick={() => fileRef.current?.click()}

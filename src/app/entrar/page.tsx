@@ -10,7 +10,7 @@ import { Button, Card, Input } from "@/components/ui";
 export default function Entrar() {
   const router = useRouter();
   const auth = useAuth();
-  const [modo, setModo] = useState<"entrar" | "crear">("entrar");
+  const [modo, setModo] = useState<"entrar" | "crear" | "enlace">("entrar");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,6 +20,24 @@ export default function Entrar() {
   async function enviar() {
     setError("");
     setInfo("");
+    // Enlace mágico: pensado para alumnos, sin contraseña.
+    if (modo === "enlace") {
+      if (!email.trim()) {
+        setError("Pon tu email.");
+        return;
+      }
+      setCargando(true);
+      const { error } = await auth.enviarEnlace(email.trim().toLowerCase());
+      setCargando(false);
+      if (error) {
+        setError(error);
+        return;
+      }
+      setInfo(
+        "Te hemos enviado un enlace a tu correo. Ábrelo desde este mismo dispositivo para entrar.",
+      );
+      return;
+    }
     if (!email.trim() || !password) {
       setError("Pon tu email y contraseña.");
       return;
@@ -67,7 +85,9 @@ export default function Entrar() {
           {modo === "entrar" ? "Entrar" : "Crear cuenta"}
         </h1>
         <p className="mt-1 text-sm text-ink-500">
-          Acceso para academias (dueños).
+          {modo === "enlace"
+            ? "Para alumnos: te enviamos un enlace y entras sin contraseña."
+            : "Acceso para academias (dueños)."}
         </p>
         <div className="mt-4 space-y-3">
           <Input
@@ -75,14 +95,18 @@ export default function Entrar() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="tu@academia.com"
+            placeholder={
+              modo === "enlace" ? "lucia@email.com" : "tu@academia.com"
+            }
           />
-          <Input
-            label="Contraseña"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          {modo !== "enlace" && (
+            <Input
+              label="Contraseña"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          )}
           {error && (
             <p className="rounded-xl bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
               {error}
@@ -98,21 +122,41 @@ export default function Entrar() {
               ? "…"
               : modo === "entrar"
                 ? "Entrar"
-                : "Crear cuenta"}
+                : modo === "crear"
+                  ? "Crear cuenta"
+                  : "Enviarme el enlace"}
           </Button>
         </div>
-        <button
-          onClick={() => {
-            setModo(modo === "entrar" ? "crear" : "entrar");
-            setError("");
-            setInfo("");
-          }}
-          className="mt-4 w-full text-center text-sm text-brand-600"
-        >
-          {modo === "entrar"
-            ? "¿No tienes cuenta? Crear una"
-            : "Ya tengo cuenta · Entrar"}
-        </button>
+
+        <div className="mt-4 space-y-2 text-center text-sm">
+          {modo !== "enlace" && (
+            <button
+              onClick={() => {
+                setModo(modo === "entrar" ? "crear" : "entrar");
+                setError("");
+                setInfo("");
+              }}
+              className="w-full text-brand-600"
+            >
+              {modo === "entrar"
+                ? "¿No tienes cuenta? Crear una"
+                : "Ya tengo cuenta · Entrar"}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setModo(modo === "enlace" ? "entrar" : "enlace");
+              setError("");
+              setInfo("");
+              setPassword("");
+            }}
+            className="w-full text-ink-500 hover:text-brand-600"
+          >
+            {modo === "enlace"
+              ? "← Soy una academia · entrar con contraseña"
+              : "🧑‍🎓 Soy alumno · entrar con un enlace"}
+          </button>
+        </div>
       </Card>
     </main>
   );

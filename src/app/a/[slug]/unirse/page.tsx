@@ -26,6 +26,7 @@ export default function Unirse() {
   const [sexo, setSexo] = useState<Sexo>("nd");
   const [bio, setBio] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [email, setEmail] = useState("");
   const [instagram, setInstagram] = useState("");
   const [visibilidad, setVisibilidad] = useState<Visibilidad>("academia");
   const [clasesSel, setClasesSel] = useState<string[]>([]);
@@ -64,6 +65,8 @@ export default function Unirse() {
       nivel,
       sexo,
       telefono: telefono.trim(),
+      email: email.trim().toLowerCase(),
+      userId: null,
       estilos: academia.estilos,
       fotoUrl: null,
       bio: bio.trim(),
@@ -135,6 +138,21 @@ export default function Unirse() {
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Lucía"
         />
+
+        <div>
+          <Input
+            label="Tu email (recomendado)"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="lucia@email.com"
+          />
+          <p className="mt-1 text-xs text-ink-500">
+            Con él podrás entrar desde cualquier móvil sin contraseña y editar
+            tus datos. Si lo dejas en blanco también puedes apuntarte, pero solo
+            te reconocerá este navegador.
+          </p>
+        </div>
 
         <div>
           <span className="mb-1 block text-sm font-medium text-ink-700 dark:text-ink-300">

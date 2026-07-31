@@ -21,6 +21,11 @@ interface AuthValue {
   user: User | null;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  /** Enlace mágico: pensado para alumnos, que no gestionan contraseñas. */
+  enviarEnlace: (
+    email: string,
+    volverA?: string,
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -61,6 +66,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
+        });
+        return { error: error?.message ?? null };
+      },
+      async enviarEnlace(email, volverA) {
+        const supabase = getSupabase();
+        if (!supabase) return { error: "Supabase no está configurado" };
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            // Al volver del correo, aterriza donde estaba (su academia).
+            emailRedirectTo:
+              typeof window !== "undefined"
+                ? `${window.location.origin}${volverA ?? "/"}`
+                : undefined,
+          },
         });
         return { error: error?.message ?? null };
       },

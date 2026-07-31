@@ -85,6 +85,8 @@ function alumnoFromRow(r: Record<string, unknown>): Alumno {
     nivel: r.nivel as Alumno["nivel"],
     sexo: r.sexo as Alumno["sexo"],
     telefono: (r.telefono as string) ?? "",
+    email: (r.email as string) ?? "",
+    userId: (r.user_id as string | null) ?? null,
     estilos: (r.estilos as string[]) ?? [],
     fotoUrl: (r.foto_url as string | null) ?? null,
     bio: (r.bio as string) ?? "",
@@ -190,13 +192,21 @@ export async function actualizarRecordatorio(
 
 // ───────────────────────── Alumnos ─────────────────────────
 
+// Columnas que la app necesita del alumno. `email` queda fuera a propósito: es
+// dato personal, `anon` no tiene permiso sobre esa columna (0011) y la app no lo
+// usa en el cliente — vincular la ficha con la cuenta se resuelve en servidor.
+const COLS_ALUMNO =
+  "id,academia_id,user_id,nombre,rol,nivel,sexo,telefono,estilos,foto_url,bio,bailando_desde,instagram,visibilidad,created_at";
+
 export async function alumnosDe(academiaId: string): Promise<Alumno[]> {
   const { data, error } = await db()
     .from("alumnos")
-    .select("*")
+    .select(COLS_ALUMNO)
     .eq("academia_id", academiaId);
   if (error) throw error;
-  return (data ?? []).map(alumnoFromRow);
+  return (data ?? []).map((r) =>
+    alumnoFromRow(r as unknown as Record<string, unknown>),
+  );
 }
 
 export async function crearAlumno(a: Alumno): Promise<void> {
@@ -210,6 +220,7 @@ export async function crearAlumno(a: Alumno): Promise<void> {
       nivel: a.nivel,
       sexo: a.sexo,
       telefono: a.telefono,
+      email: a.email,
       estilos: a.estilos,
       foto_url: a.fotoUrl,
       bio: a.bio,
@@ -217,7 +228,35 @@ export async function crearAlumno(a: Alumno): Promise<void> {
       instagram: a.instagram,
       visibilidad: a.visibilidad,
     });
+  // 23505 = clave única duplicada: ese email ya está apuntado en la academia.
+  if (error?.code === "23505") {
+    throw new Error(
+      "ese email ya está apuntado en esta academia. Entra con tu enlace en vez de volver a registrarte",
+    );
+  }
   if (error) throw error;
+}
+
+/**
+ * Vincula la ficha de alumno con la cuenta que acaba de entrar (reclamarla).
+ * Solo funciona si el email de la ficha coincide con el de la sesión y la ficha
+ * no tiene dueño todavía (política `alumnos_reclamar`). Devuelve el id del
+ * alumno vinculado, o null si no había ninguna ficha suya en esa academia.
+ */
+export async function vincularAlumno(
+  academiaId: string,
+  email: string,
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await db()
+    .from("alumnos")
+    .update({ user_id: userId })
+    .eq("academia_id", academiaId)
+    .ilike("email", email)
+    .is("user_id", null)
+    .select("id");
+  if (error) throw error;
+  return data && data.length > 0 ? (data[0].id as string) : null;
 }
 
 export async function actualizarAlumno(

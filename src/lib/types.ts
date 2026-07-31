@@ -60,6 +60,10 @@ export interface Alumno {
   nivel: Nivel;
   sexo: Sexo;
   telefono: string;
+  /** Email del alumno (opcional). Si lo da, puede entrar con enlace mágico. */
+  email: string;
+  /** Usuario de Supabase vinculado, cuando ha reclamado su ficha. */
+  userId: string | null;
   estilos: string[];
   // Perfil opcional (opt-in, privacidad primero).
   fotoUrl: string | null;

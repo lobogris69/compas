@@ -121,6 +121,8 @@ describe("sugerirRefuerzos", () => {
       nivel,
       sexo: "nd",
       telefono: "",
+      email: "",
+      userId: null,
       estilos: ["Salsa"],
       fotoUrl: null,
       bio: "",

@@ -66,6 +66,8 @@ function alumno(
     nivel,
     sexo: "nd",
     telefono: "",
+    email: "",
+    userId: null,
     estilos: ["Salsa", "Bachata"],
     fotoUrl: null,
     bio: "",

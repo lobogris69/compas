@@ -369,6 +369,44 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  // Al entrar con enlace mágico, el alumno "reclama" su ficha: la que lleva su
+  // email y aún no tiene dueño pasa a apuntar a su cuenta. A partir de ahí RLS
+  // ya le deja editar su perfil, y su identidad deja de depender del navegador.
+  // El emparejamiento por email se hace en el servidor (ver remote.vincularAlumno),
+  // así que el cliente nunca necesita leer emails ajenos.
+  const vinculado = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (MODE !== "supabase") return;
+    const email = auth.user?.email;
+    const uid = auth.user?.id;
+    if (!email || !uid) return;
+    for (const ac of db.academias) {
+      const clave = `${uid}:${ac.id}`;
+      if (vinculado.current.has(clave)) continue;
+      vinculado.current.add(clave);
+      const yaMia = db.alumnos.find(
+        (a) => a.academiaId === ac.id && a.userId === uid,
+      );
+      if (yaMia) {
+        identificarme(ac.id, yaMia.id);
+        continue;
+      }
+      const acId = ac.id;
+      encolar(async () => {
+        const id = await remote.vincularAlumno(acId, email, uid);
+        if (!id) return; // no tenía ficha en esta academia: normal
+        update((prev) => ({
+          ...prev,
+          alumnos: prev.alumnos.map((a) =>
+            a.id === id ? { ...a, userId: uid } : a,
+          ),
+        }));
+        identificarme(acId, id);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.user, db.academias, db.alumnos]);
+
   const crearAlumno: StoreValue["crearAlumno"] = useCallback(
     (input) => {
       const alumno: Alumno = {
