@@ -6,6 +6,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { calcularBalance, estiloEstado } from "@/lib/balance";
+import { estadoPrevio, preverBalance } from "@/lib/prediccion";
 import { cn } from "@/lib/cn";
 import { proximaFecha } from "@/lib/demo";
 import { BalanceBar, Button, Card, Input, LinkButton } from "@/components/ui";
@@ -27,6 +28,13 @@ export default function PanelAcademia() {
 
   const clases = academia ? store.clasesDe(academia.id) : [];
   const alumnos = academia ? store.alumnosDe(academia.id) : [];
+  const historial = useMemo(
+    () =>
+      academia
+        ? store.db.asistencias.filter((a) => a.academiaId === academia.id)
+        : [],
+    [academia, store.db.asistencias],
+  );
 
   const filas = useMemo(() => {
     if (!academia) return [];
@@ -40,10 +48,37 @@ export default function PanelAcademia() {
         .filter(Boolean)
         .map((al) => ({ rol: al!.rol }));
       const balance = calcularBalance(asistentes, academia.reglas.tolerancia);
-      const matriculados = store.alumnosDeClase(c.id).length;
-      return { clase: c, fecha, balance, matriculados, confirmados: balance.total };
+      const roster = store.alumnosDeClase(c.id);
+
+      // Previsión: quién vendrá de verdad, según el historial de "pasar lista".
+      // Es lo que permite avisar el lunes en vez de enterarse el jueves.
+      const todas = store.asistenciasDe(c.id, fecha);
+      const candidatos = roster.map((al) => ({
+        alumnoId: al.id,
+        rol: al.rol,
+        previo: estadoPrevio(
+          todas.find((x) => x.alumnoId === al.id)?.estado ?? null,
+        ),
+      }));
+      const prevision =
+        candidatos.length > 0
+          ? preverBalance(
+              candidatos,
+              { registros: historial },
+              academia.reglas.tolerancia,
+            )
+          : null;
+
+      return {
+        clase: c,
+        fecha,
+        balance,
+        prevision,
+        matriculados: roster.length,
+        confirmados: balance.total,
+      };
     });
-  }, [academia, clases, alumnos, store]);
+  }, [academia, clases, alumnos, store, historial]);
 
   if (!store.ready) {
     return <Cargando />;
@@ -136,7 +171,7 @@ export default function PanelAcademia() {
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
               {filas.map((f) => {
                 const sel = f.clase.id === selFila.clase.id;
-                const est = estiloEstado(f.balance.estado);
+                const est = estiloEstado((f.prevision ?? f.balance).estado);
                 return (
                   <button
                     key={f.clase.id}
@@ -160,6 +195,8 @@ export default function PanelAcademia() {
             matriculados={selFila.matriculados}
             confirmados={selFila.confirmados}
             balance={selFila.balance}
+            prevision={selFila.prevision}
+            diaClase={DIAS_SEMANA[selFila.clase.diaSemana]}
             hrefDetalle={`/a/${slug}/clase/${selFila.clase.id}`}
           />
         </section>
@@ -167,8 +204,8 @@ export default function PanelAcademia() {
 
       <h2 className="mb-3 mt-8 text-lg font-bold">Próximas clases</h2>
       <div className="space-y-3">
-        {filas.map(({ clase, fecha, balance }) => {
-          const est = estiloEstado(balance.estado);
+        {filas.map(({ clase, fecha, balance, prevision }) => {
+          const est = estiloEstado((prevision ?? balance).estado);
           return (
             <Link key={clase.id} href={`/a/${slug}/clase/${clase.id}`}>
               <Card className="transition hover:border-brand-400">

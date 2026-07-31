@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, BalanceBar } from "@/components/ui";
 import { estiloEstado, type BalanceResult } from "@/lib/balance";
+import type { Prevision } from "@/lib/prediccion";
 
 // Marcador súper-visual del estado de una clase: matriculados, confirmados,
 // leaders/followers y equilibrio de un vistazo. Con acceso a refuerzos si falta.
@@ -10,6 +11,8 @@ export function MarcadorClase({
   matriculados,
   confirmados,
   balance,
+  prevision,
+  diaClase,
   hrefDetalle,
 }: {
   nombre: string;
@@ -17,9 +20,16 @@ export function MarcadorClase({
   matriculados: number;
   confirmados: number;
   balance: BalanceResult;
+  prevision?: Prevision | null;
+  diaClase?: string;
   hrefDetalle: string;
 }) {
-  const est = estiloEstado(balance.estado);
+  // El semáforo refleja cómo va a ACABAR la clase, no cómo va ahora: con 0
+  // confirmados el recuento saldría verde aunque la previsión avise de que
+  // faltarán followers, y la tarjeta se contradeciría a sí misma.
+  const mandan = prevision ?? balance;
+  const est = estiloEstado(mandan.estado);
+  const faltan = mandan.faltan;
   return (
     <Card className="space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -84,15 +94,61 @@ export function MarcadorClase({
         </div>
       </div>
 
-      {balance.faltan ? (
+      {/* Previsión: lo que de verdad va a pasar, antes de que pase. */}
+      {prevision && (
+        <div className="rounded-2xl border border-brand-200 bg-brand-50/60 p-3 dark:border-brand-900 dark:bg-brand-950/30">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+              🔮 Previsión {diaClase ? `del ${diaClase.toLowerCase()}` : ""}
+            </p>
+            <p className="text-xs text-ink-500">
+              {prevision.confianza === "baja"
+                ? "pocos datos aún"
+                : prevision.confianza === "media"
+                  ? "fiabilidad media"
+                  : "fiabilidad alta"}
+            </p>
+          </div>
+          <p className="mt-1 text-sm">
+            Vendrán unos <b>{prevision.total}</b> ·{" "}
+            <span className="font-semibold text-leader">
+              {prevision.leaders} leaders
+            </span>{" "}
+            ·{" "}
+            <span className="font-semibold text-follower">
+              {prevision.followers} followers
+            </span>
+          </p>
+          {prevision.faltan ? (
+            <p className="mt-1 text-sm font-medium text-amber-800 dark:text-amber-300">
+              Si nadie más se apunta, te faltarán{" "}
+              <b>{prevision.faltan.cantidad}</b>{" "}
+              {prevision.faltan.rol === "leader" ? "leaders" : "followers"}.
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
+              Debería quedar equilibrada.
+            </p>
+          )}
+        </div>
+      )}
+
+      {faltan ? (
         <Link
           href={hrefDetalle}
           className="flex items-center justify-between rounded-xl bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300"
         >
           <span>
-            Faltan <b>{balance.faltan.cantidad}</b>{" "}
-            {balance.faltan.rol === "leader" ? "leaders" : "followers"} para
-            cuadrar
+            {prevision ? "Adelántate" : "Faltan"}{" "}
+            {prevision ? (
+              <>y avisa a {faltan.cantidad}{" "}
+                {faltan.rol === "leader" ? "leaders" : "followers"}</>
+            ) : (
+              <>
+                <b>{faltan.cantidad}</b>{" "}
+                {faltan.rol === "leader" ? "leaders" : "followers"} para cuadrar
+              </>
+            )}
           </span>
           <span className="shrink-0 font-semibold">📣 Buscar refuerzos →</span>
         </Link>
