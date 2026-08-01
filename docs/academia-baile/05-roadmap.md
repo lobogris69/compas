@@ -15,7 +15,8 @@
 > | **6** | **Reservas de clases y talleres** (idea). | ⏳ propuesto |
 > | **S** | **Seguridad**: RLS y Storage cerrados; login de alumno por enlace mágico; email y teléfono protegidos por permisos de columna + función con comprobación de equipo. | ✅ hecho |
 > | **7** | **Asistencia real** ("pasar lista"): quién vino de verdad, con `asistio` solo escribible por dueño/profesor. Base del histórico y de la predicción. | ✅ hecho |
-> | **8** | **Motor predictivo**: propensión por alumno y día, refuerzos ordenados por probabilidad de aceptar, antispam de avisos, y conectar el "avisar 3h antes". | ⏳ siguiente |
+> | **8** | **Motor predictivo**: previsión de asistencia por alumno (histórico suavizado), semáforo que refleja cómo va a ACABAR la clase, y refuerzos ordenados por probabilidad con antispam de avisos. | ✅ hecho |
+> | **9** | **Pendiente conocido**: editar el perfil de la academia (hoy congelado desde el alta), envío automático de WhatsApp, bajas lógicas, exportar a CSV, y conectar el "avisar N horas antes" (sigue sin hacer nada). | ⏳ siguiente |
 >
 > El motor de balance/refuerzos (déficit, nivel compatible, aviso WhatsApp, "Apuntar")
 > ya está implementado en `src/lib/balance.ts` y la pantalla de clase.
