@@ -7,6 +7,7 @@ import {
   type Alumno,
   type Asistencia,
   type Clase,
+  type AvisoRefuerzo,
   type Matricula,
   type Miembro,
   type Pago,
@@ -26,6 +27,7 @@ export interface DemoData {
   miembros: Miembro[];
   planes: PlanPago[];
   pagos: Pago[];
+  avisos: AvisoRefuerzo[];
 }
 
 const NOMBRES_LEADER = [
@@ -269,5 +271,6 @@ export function crearDemo(): DemoData {
     miembros: [],
     planes,
     pagos: [],
+    avisos: [],
   };
 }

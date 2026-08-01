@@ -89,6 +89,72 @@ export interface Candidato {
   previo: EstadoPrevio;
 }
 
+/** Peso de cada señal al decidir a quién avisar. Explícitos para poder discutirlos. */
+export const PESOS = {
+  /** Ya es de esta clase y solo falta que conteste: la conversión más barata. */
+  esDeLaClase: 0.3,
+  /** Cada aviso reciente le resta prioridad, para repartir y no quemar a nadie. */
+  porAvisoReciente: 0.2,
+};
+
+export interface SenalesRefuerzo {
+  alumnoId: string;
+  /** ¿Está matriculado en esta clase? */
+  esDeLaClase: boolean;
+  /** Avisos que ya ha recibido últimamente. */
+  avisosRecientes: number;
+}
+
+export interface RefuerzoPuntuado extends SenalesRefuerzo {
+  /** Probabilidad estimada de que aparezca si se le avisa. */
+  probabilidad: number;
+  puntuacion: number;
+  /** Por qué se sugiere, en lenguaje llano (para enseñarlo en pantalla). */
+  motivos: string[];
+}
+
+/**
+ * Ordena a quién avisar primero. Antes se listaba por nivel, así que se avisaba
+ * antes a un desconocido que a alguien de la propia clase que aún no había
+ * contestado — y siempre a los mismos.
+ */
+export function puntuarRefuerzo(
+  s: SenalesRefuerzo,
+  historial: Historial,
+): RefuerzoPuntuado {
+  // Si aún no ha contestado, su probabilidad "sin respuesta" es la mejor
+  // estimación de si aparecería en caso de que se lo pidamos.
+  const probabilidad = probabilidadDeVenir(s.alumnoId, "sin", historial);
+  const puntuacion =
+    probabilidad +
+    (s.esDeLaClase ? PESOS.esDeLaClase : 0) -
+    s.avisosRecientes * PESOS.porAvisoReciente;
+
+  const motivos: string[] = [];
+  if (s.esDeLaClase) motivos.push("es de esta clase");
+  if (probabilidad >= 0.7) motivos.push("casi siempre viene");
+  else if (probabilidad <= 0.3) motivos.push("suele fallar");
+  if (s.avisosRecientes > 0) {
+    motivos.push(
+      s.avisosRecientes === 1
+        ? "ya se le avisó una vez"
+        : `ya se le avisó ${s.avisosRecientes} veces`,
+    );
+  }
+
+  return { ...s, probabilidad, puntuacion, motivos };
+}
+
+/** Los mejores primero. */
+export function ordenarRefuerzos(
+  senales: SenalesRefuerzo[],
+  historial: Historial,
+): RefuerzoPuntuado[] {
+  return senales
+    .map((s) => puntuarRefuerzo(s, historial))
+    .sort((a, b) => b.puntuacion - a.puntuacion);
+}
+
 export interface Prevision extends BalanceResult {
   /** Gente esperada, en decimal (antes de redondear). */
   esperados: number;

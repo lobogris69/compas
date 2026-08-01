@@ -8,6 +8,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import {
   DIAS_SEMANA,
   NIVELES,
+  type Clase,
   type Nivel,
   type ReglasBalance,
   type TipoPlan,
@@ -46,6 +47,16 @@ export default function Config() {
   const [pTipo, setPTipo] = useState<TipoPlan>("mensual");
   const [pImporte, setPImporte] = useState("");
   const [pClases, setPClases] = useState("");
+
+  // edición de clases
+  const [editando, setEditando] = useState<string | null>(null);
+  const [confirmarBorrado, setConfirmarBorrado] = useState<Clase | null>(null);
+  const [eNombre, setENombre] = useState("");
+  const [eEstilo, setEEstilo] = useState("");
+  const [eNivel, setENivel] = useState<Nivel>("medio");
+  const [eDia, setEDia] = useState(1);
+  const [eHora, setEHora] = useState("20:00");
+  const [eSala, setESala] = useState("");
 
   // mensaje de recordatorio de pago
   const [recordatorio, setRecordatorio] = useState(
@@ -113,6 +124,35 @@ export default function Config() {
     if (!academia || !reglas) return;
     store.actualizarAcademia(academia.id, { reglas });
     setGuardado(true);
+  }
+
+  function empezarEditar(c: Clase) {
+    setEditando(c.id);
+    setConfirmarBorrado(null);
+    setENombre(c.nombre);
+    setEEstilo(c.estilo);
+    setENivel(c.nivel);
+    setEDia(c.diaSemana);
+    setEHora(c.hora);
+    setESala(c.sala);
+  }
+
+  function guardarClase(id: string) {
+    if (!eNombre.trim()) return;
+    store.actualizarClase(id, {
+      nombre: eNombre.trim(),
+      estilo: eEstilo.trim(),
+      nivel: eNivel,
+      diaSemana: eDia,
+      hora: eHora,
+      sala: eSala.trim(),
+    });
+    setEditando(null);
+  }
+
+  function borrarClase(c: Clase) {
+    setEditando(null);
+    setConfirmarBorrado(c);
   }
 
   function invitarProf() {
@@ -203,15 +243,116 @@ export default function Config() {
       <Card className="mt-5">
         <h2 className="font-bold">Clases ({clases.length})</h2>
         <ul className="mt-2 divide-y divide-ink-100 dark:divide-ink-800">
-          {clases.map((c) => (
-            <li key={c.id} className="flex justify-between py-2 text-sm">
-              <span className="font-medium">{c.nombre}</span>
-              <span className="text-ink-500">
-                {DIAS_SEMANA[c.diaSemana]} · {c.hora}
-              </span>
-            </li>
-          ))}
+          {clases.map((c) =>
+            editando === c.id ? (
+              <li key={c.id} className="py-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input
+                    label="Nombre"
+                    value={eNombre}
+                    onChange={(e) => setENombre(e.target.value)}
+                  />
+                  <Input
+                    label="Estilo"
+                    value={eEstilo}
+                    onChange={(e) => setEEstilo(e.target.value)}
+                  />
+                  <Select
+                    label="Nivel"
+                    value={eNivel}
+                    onChange={(e) => setENivel(e.target.value as Nivel)}
+                  >
+                    {NIVELES.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    label="Día"
+                    value={eDia}
+                    onChange={(e) => setEDia(Number(e.target.value))}
+                  >
+                    {DIAS_SEMANA.map((d, i) => (
+                      <option key={d} value={i}>
+                        {d}
+                      </option>
+                    ))}
+                  </Select>
+                  <Input
+                    label="Hora"
+                    type="time"
+                    value={eHora}
+                    onChange={(e) => setEHora(e.target.value)}
+                  />
+                  <Input
+                    label="Sala"
+                    value={eSala}
+                    onChange={(e) => setESala(e.target.value)}
+                  />
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Button onClick={() => guardarClase(c.id)}>Guardar</Button>
+                  <Button variant="secondary" onClick={() => setEditando(null)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </li>
+            ) : (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-3 py-2 text-sm"
+              >
+                <span className="min-w-0">
+                  <span className="font-medium">{c.nombre}</span>{" "}
+                  <span className="text-ink-500">
+                    · {DIAS_SEMANA[c.diaSemana]} · {c.hora}
+                    {c.sala ? ` · ${c.sala}` : ""}
+                  </span>
+                </span>
+                <span className="flex shrink-0 gap-3">
+                  <button
+                    onClick={() => empezarEditar(c)}
+                    className="font-semibold text-brand-600 hover:underline"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => borrarClase(c)}
+                    className="text-rose-600 hover:underline"
+                  >
+                    Borrar
+                  </button>
+                </span>
+              </li>
+            ),
+          )}
         </ul>
+        {confirmarBorrado && (
+          <div className="mt-3 rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm dark:border-rose-900 dark:bg-rose-950/30">
+            <p className="text-rose-800 dark:text-rose-200">
+              ¿Seguro que quieres borrar <b>{confirmarBorrado.nombre}</b>? Se
+              perderán también sus matrículas y su historial de asistencia.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <Button
+                variant="danger"
+                onClick={() => {
+                  store.eliminarClase(confirmarBorrado.id);
+                  setConfirmarBorrado(null);
+                }}
+              >
+                Sí, borrar
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setConfirmarBorrado(null)}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 rounded-xl bg-ink-50 p-3 dark:bg-ink-900">
           <p className="mb-2 text-sm font-semibold">Añadir clase</p>

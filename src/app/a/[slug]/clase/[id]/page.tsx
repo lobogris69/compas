@@ -18,6 +18,7 @@ import {
   mensajeRefuerzoDirecto,
 } from "@/lib/aviso";
 import { DIAS_SEMANA } from "@/lib/types";
+import { puntuarRefuerzo } from "@/lib/prediccion";
 
 export default function DetalleClase() {
   const { slug, id } = useParams<{ slug: string; id: string }>();
@@ -55,14 +56,33 @@ export default function DetalleClase() {
     const efectivos = asignarRolesEfectivos(
       asistentes.map((a) => ({ id: a.id, rol: a.rol })),
     );
+    // A quién avisar primero: la predicción decide, no el orden alfabético.
+    const historial = {
+      registros: store.db.asistencias.filter(
+        (x) => x.academiaId === academia.id,
+      ),
+    };
+    const delaClase = new Set(store.alumnosDeClase(clase.id).map((a) => a.id));
+    const senales = (alumnoId: string) => ({
+      alumnoId,
+      esDeLaClase: delaClase.has(alumnoId),
+      avisosRecientes: store.avisosRecientesDe(alumnoId),
+    });
     const refuerzos = sugerirRefuerzos(
       academia,
       alumnos,
       clase.nivel,
       balance,
       yaResponden,
+      (al) => puntuarRefuerzo(senales(al.id), historial).puntuacion,
     );
-    return { asistentes, balance, efectivos, refuerzos };
+    const explicacion = new Map(
+      refuerzos.map((r) => [
+        r.alumno.id,
+        puntuarRefuerzo(senales(r.alumno.id), historial),
+      ]),
+    );
+    return { asistentes, balance, efectivos, refuerzos, explicacion };
   }, [academia, clase, alumnos, fecha, store]);
 
   if (!store.ready)
@@ -85,7 +105,7 @@ export default function DetalleClase() {
       </main>
     );
 
-  const { asistentes, balance, efectivos, refuerzos } = datos;
+  const { asistentes, balance, efectivos, refuerzos, explicacion } = datos;
   const est = estiloEstado(balance.estado);
 
   return (
@@ -188,7 +208,12 @@ export default function DetalleClase() {
                 <Avatar nombre={alumno.nombre} fotoUrl={alumno.fotoUrl} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{alumno.nombre}</p>
-                  <p className="text-xs text-ink-500">nivel {alumno.nivel}</p>
+                  <p className="text-xs text-ink-500">
+                    nivel {alumno.nivel}
+                    {explicacion.get(alumno.id)?.motivos.length
+                      ? ` · ${explicacion.get(alumno.id)!.motivos.join(" · ")}`
+                      : ""}
+                  </p>
                 </div>
                 <RolBadge rol={alumno.rol} />
                 <a
@@ -208,6 +233,14 @@ export default function DetalleClase() {
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Avisar por WhatsApp"
+                  onClick={() =>
+                    store.registrarAviso(
+                      academia.id,
+                      clase.id,
+                      alumno.id,
+                      fecha,
+                    )
+                  }
                   className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#25D366] text-white"
                 >
                   💬

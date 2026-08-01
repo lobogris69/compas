@@ -108,6 +108,12 @@ export function sugerirRefuerzos(
   nivelClase: Nivel,
   balance: BalanceResult,
   yaResponden: Set<string>,
+  /**
+   * Prioridad de cada candidato (mayor = avisar antes). Si no se pasa, se
+   * ordena por cercanía de nivel como siempre. La app le enchufa la predicción
+   * (quién suele venir, quién es de esta clase, a quién ya se avisó).
+   */
+  puntuar?: (alumno: Alumno) => number,
 ): Candidato[] {
   if (!balance.faltan) return [];
   const rolNecesario = balance.faltan.rol;
@@ -123,6 +129,11 @@ export function sugerirRefuerzos(
     )
       continue;
     candidatos.push({ alumno, rolRefuerzo: rolNecesario });
+  }
+
+  if (puntuar) {
+    candidatos.sort((a, b) => puntuar(b.alumno) - puntuar(a.alumno));
+    return candidatos.slice(0, academia.reglas.cupoRefuerzos);
   }
 
   // Prioriza el mismo nivel y luego los "ambos" (más flexibles).

@@ -151,6 +151,16 @@ export interface Pago {
   createdAt: string;
 }
 
+/** Registro de que se avisó a un alumno para reforzar una sesión. */
+export interface AvisoRefuerzo {
+  id: string;
+  academiaId: string;
+  claseId: string;
+  alumnoId: string;
+  fecha: string;
+  createdAt: string;
+}
+
 /** Matrícula: vincula un alumno con una clase de su academia (puede tener varias). */
 export interface Matricula {
   id: string;

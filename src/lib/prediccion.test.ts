@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   PROBABILIDAD_INICIAL,
   estadoPrevio,
+  ordenarRefuerzos,
   preverBalance,
   probabilidadDeVenir,
   type Candidato,
@@ -87,6 +88,64 @@ describe("probabilidadDeVenir", () => {
     expect(probabilidadDeVenir("a", "si", h)).toBeCloseTo(
       PROBABILIDAD_INICIAL.si,
     );
+  });
+});
+
+describe("ordenarRefuerzos", () => {
+  it("antepone a quien es de la clase frente a un desconocido igual de fiable", () => {
+    const orden = ordenarRefuerzos(
+      [
+        { alumnoId: "fuera", esDeLaClase: false, avisosRecientes: 0 },
+        { alumnoId: "dentro", esDeLaClase: true, avisosRecientes: 0 },
+      ],
+      hist([]),
+    );
+    expect(orden[0].alumnoId).toBe("dentro");
+    expect(orden[0].motivos).toContain("es de esta clase");
+  });
+
+  it("baja a quien ya ha sido avisado, para no quemar siempre a los mismos", () => {
+    const orden = ordenarRefuerzos(
+      [
+        { alumnoId: "quemado", esDeLaClase: true, avisosRecientes: 3 },
+        { alumnoId: "descansado", esDeLaClase: true, avisosRecientes: 0 },
+      ],
+      hist([]),
+    );
+    expect(orden[0].alumnoId).toBe("descansado");
+    expect(orden[1].motivos.join(" ")).toContain("ya se le avisó");
+  });
+
+  it("prefiere a quien de verdad suele aparecer", () => {
+    const registros = [
+      ...Array.from({ length: 10 }, () => reg("cumple", "quiza", true)),
+      ...Array.from({ length: 10 }, () => reg("falla", "quiza", false)),
+    ];
+    const orden = ordenarRefuerzos(
+      [
+        { alumnoId: "falla", esDeLaClase: false, avisosRecientes: 0 },
+        { alumnoId: "cumple", esDeLaClase: false, avisosRecientes: 0 },
+      ],
+      hist(registros),
+    );
+    expect(orden[0].alumnoId).toBe("cumple");
+    expect(orden[0].motivos).toContain("casi siempre viene");
+    expect(orden[1].motivos).toContain("suele fallar");
+  });
+
+  it("alguien fiable de fuera puede adelantar a uno de la clase que falla siempre", () => {
+    const registros = [
+      ...Array.from({ length: 12 }, () => reg("informal", "quiza", false)),
+      ...Array.from({ length: 12 }, () => reg("crack", "quiza", true)),
+    ];
+    const orden = ordenarRefuerzos(
+      [
+        { alumnoId: "informal", esDeLaClase: true, avisosRecientes: 0 },
+        { alumnoId: "crack", esDeLaClase: false, avisosRecientes: 0 },
+      ],
+      hist(registros),
+    );
+    expect(orden[0].alumnoId).toBe("crack");
   });
 });
 

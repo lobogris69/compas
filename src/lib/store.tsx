@@ -24,6 +24,7 @@ import type {
   Asistencia,
   Clase,
   EstadoAsistencia,
+  AvisoRefuerzo,
   Matricula,
   Miembro,
   Pago,
@@ -46,6 +47,7 @@ interface DB {
   miembros: Miembro[];
   planes: PlanPago[];
   pagos: Pago[];
+  avisos: AvisoRefuerzo[];
 }
 
 const VACIO: DB = {
@@ -58,6 +60,7 @@ const VACIO: DB = {
   miembros: [],
   planes: [],
   pagos: [],
+  avisos: [],
 };
 
 /** Inserta/actualiza por id (para hidratar desde la nube sin duplicar). */
@@ -132,6 +135,9 @@ interface StoreValue {
   videosDe: (academiaId: string) => Video[];
   // Clases
   crearClase: (c: Omit<Clase, "id" | "createdAt">) => Clase;
+  actualizarClase: (id: string, patch: Partial<Clase>) => void;
+  /** Borra la clase y, en cascada, sus matrículas y asistencias. */
+  eliminarClase: (id: string) => void;
   clasesDe: (academiaId: string) => Clase[];
   // Matrículas (alumno ↔ clase; un alumno puede ir a varias)
   matricular: (academiaId: string, alumnoId: string, claseId: string) => void;
@@ -150,6 +156,15 @@ interface StoreValue {
     },
   ) => void;
   asistenciasDe: (claseId: string, fecha: string) => Asistencia[];
+  /** Deja constancia de que se avisó a un alumno (para repartir los avisos). */
+  registrarAviso: (
+    academiaId: string,
+    claseId: string,
+    alumnoId: string,
+    fecha: string,
+  ) => void;
+  /** Cuántas veces se avisó a un alumno últimamente. */
+  avisosRecientesDe: (alumnoId: string) => number;
   /** Pasar lista: marca si un alumno vino de verdad (solo dueño/profesor). */
   marcarAsistencia: (
     academiaId: string,
@@ -351,6 +366,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         miembros: prev.miembros.filter((m) => m.academiaId !== id),
         planes: prev.planes.filter((p) => p.academiaId !== id),
         pagos: prev.pagos.filter((p) => p.academiaId !== id),
+        avisos: prev.avisos.filter((a) => a.academiaId !== id),
       }));
       // Limpia propiedad e identidad ligera de esa academia.
       setOwned((prev) => {
@@ -513,6 +529,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return clase;
     },
     [update],
+  );
+
+  const actualizarClase: StoreValue["actualizarClase"] = useCallback(
+    (id, patch) => {
+      update((prev) => ({
+        ...prev,
+        clases: prev.clases.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+      }));
+      if (MODE === "supabase") encolar(() => remote.actualizarClase(id, patch));
+    },
+    [update, encolar],
+  );
+
+  const eliminarClase: StoreValue["eliminarClase"] = useCallback(
+    (id) => {
+      update((prev) => ({
+        ...prev,
+        clases: prev.clases.filter((c) => c.id !== id),
+        // La BD borra en cascada; aquí limpiamos memoria para que cuadre.
+        matriculas: prev.matriculas.filter((m) => m.claseId !== id),
+        asistencias: prev.asistencias.filter((a) => a.claseId !== id),
+        avisos: prev.avisos.filter((a) => a.claseId !== id),
+      }));
+      if (MODE === "supabase") encolar(() => remote.eliminarClase(id));
+    },
+    [update, encolar],
   );
 
   const matricular: StoreValue["matricular"] = useCallback(
@@ -718,6 +760,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
+  const registrarAviso: StoreValue["registrarAviso"] = useCallback(
+    (academiaId, claseId, alumnoId, fecha) => {
+      const aviso: AvisoRefuerzo = {
+        id: newId(),
+        academiaId,
+        claseId,
+        alumnoId,
+        fecha,
+        createdAt: new Date().toISOString(),
+      };
+      update((prev) => ({ ...prev, avisos: [...prev.avisos, aviso] }));
+      if (MODE === "supabase") encolar(() => remote.crearAviso(aviso));
+    },
+    [update, encolar],
+  );
+
   const marcarAsistencia: StoreValue["marcarAsistencia"] = useCallback(
     (academiaId, claseId, alumnoId, fecha, vino) => {
       update((prev) => {
@@ -779,6 +837,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             miembros,
             planes,
             pagos,
+            avisos,
           ] = await Promise.all([
             remote.alumnosDe(ac.id),
             remote.clasesDe(ac.id),
@@ -788,6 +847,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             remote.miembrosDe(ac.id),
             remote.planesDe(ac.id),
             remote.pagosDe(ac.id),
+            remote.avisosDe(ac.id),
           ]);
           setDb((prev) => ({
             academias: upsertById(prev.academias, [ac]),
@@ -807,6 +867,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             miembros: reemplazarPorAcademia(prev.miembros, ac.id, miembros),
             planes: reemplazarPorAcademia(prev.planes, ac.id, planes),
             pagos: reemplazarPorAcademia(prev.pagos, ac.id, pagos),
+            avisos: reemplazarPorAcademia(prev.avisos, ac.id, avisos),
           }));
           if (ac.ownerId && auth.user && ac.ownerId === auth.user.id) {
             setOwned((prev) =>
@@ -882,6 +943,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           .filter((v) => v.academiaId === academiaId)
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       crearClase,
+      actualizarClase,
+      eliminarClase,
       clasesDe: (academiaId) =>
         db.clases.filter((c) => c.academiaId === academiaId),
       matricular,
@@ -908,6 +971,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           (a) => a.claseId === claseId && a.fecha === fecha,
         ),
       marcarAsistencia,
+      registrarAviso,
+      avisosRecientesDe: (alumnoId) => {
+        // Últimos 21 días: suficiente para repartir sin olvidar del todo.
+        const desde = new Date();
+        desde.setDate(desde.getDate() - 21);
+        const corte = desde.toISOString();
+        return db.avisos.filter(
+          (a) => a.alumnoId === alumnoId && a.createdAt >= corte,
+        ).length;
+      },
       fiabilidadDe: (alumnoId) => {
         const pasadas = db.asistencias.filter(
           (a) => a.alumnoId === alumnoId && a.asistio !== null,
@@ -944,9 +1017,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       actualizarVideo,
       eliminarVideo,
       crearClase,
+      actualizarClase,
+      eliminarClase,
       matricular,
       desmatricular,
       marcarAsistencia,
+      registrarAviso,
       cargarTelefonos,
       invitarMiembro,
       quitarMiembro,

@@ -10,6 +10,7 @@ import type {
   Academia,
   Alumno,
   Asistencia,
+  AvisoRefuerzo,
   Clase,
   EstadoAsistencia,
   Matricula,
@@ -671,6 +672,68 @@ export async function marcarAsistencia(
     vino,
   });
   if (error) throw error;
+}
+
+// ───────────────────────── Avisos de refuerzo ─────────────────────────
+
+export async function avisosDe(academiaId: string): Promise<AvisoRefuerzo[]> {
+  const { data, error } = await db()
+    .from("avisos_refuerzo")
+    .select("*")
+    .eq("academia_id", academiaId);
+  // Un alumno no puede leerlos (RLS): no es un fallo, simplemente no le tocan.
+  if (error) return [];
+  return (data ?? []).map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    academiaId: r.academia_id as string,
+    claseId: r.clase_id as string,
+    alumnoId: r.alumno_id as string,
+    fecha: r.fecha as string,
+    createdAt: r.created_at as string,
+  }));
+}
+
+export async function crearAviso(a: AvisoRefuerzo): Promise<void> {
+  const { error } = await db().from("avisos_refuerzo").insert({
+    id: a.id,
+    academia_id: a.academiaId,
+    clase_id: a.claseId,
+    alumno_id: a.alumnoId,
+    fecha: a.fecha,
+  });
+  if (error) throw error;
+}
+
+export async function actualizarClase(
+  id: string,
+  patch: Partial<Clase>,
+): Promise<void> {
+  const row: Record<string, unknown> = {};
+  if (patch.nombre !== undefined) row.nombre = patch.nombre;
+  if (patch.nivel !== undefined) row.nivel = patch.nivel;
+  if (patch.estilo !== undefined) row.estilo = patch.estilo;
+  if (patch.diaSemana !== undefined) row.dia_semana = patch.diaSemana;
+  if (patch.hora !== undefined) row.hora = patch.hora;
+  if (patch.sala !== undefined) row.sala = patch.sala;
+  if (patch.aforo !== undefined) row.aforo = patch.aforo;
+  if (Object.keys(row).length === 0) return;
+  const { data, error } = await db()
+    .from("clases")
+    .update(row)
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+  exigirFilas(data, "guardar la clase");
+}
+
+export async function eliminarClase(id: string): Promise<void> {
+  const { data, error } = await db()
+    .from("clases")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+  exigirFilas(data, "borrar la clase");
 }
 
 export async function asistenciasDeAcademia(
