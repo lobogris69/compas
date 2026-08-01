@@ -17,7 +17,8 @@
 > | **7** | **Asistencia real** ("pasar lista"): quién vino de verdad, con `asistio` solo escribible por dueño/profesor. Base del histórico y de la predicción. | ✅ hecho |
 > | **8** | **Motor predictivo**: previsión de asistencia por alumno (histórico suavizado), semáforo que refleja cómo va a ACABAR la clase, y refuerzos ordenados por probabilidad con antispam de avisos. | ✅ hecho |
 > | **9** | **Editar la academia** (identidad, contacto, estilos, profesores; el slug no cambia para no romper QR) y **bajas lógicas** (dar de baja ya no destruye pagos ni historial; se puede readmitir). | ✅ hecho |
-> | **10** | **Pendiente conocido**: exportar a CSV, envío automático de WhatsApp (necesita API externa), conectar el "avisar N horas antes" (sigue sin hacer nada), facturación propia, importar alumnos desde Excel y textos legales/RGPD. | ⏳ siguiente |
+> | **10** | **Exportar a CSV** (alumnos, pagos y asistencia; formato pensado para Excel en español, con email y teléfono vía función con comprobación de equipo). | ✅ hecho |
+> | **11** | **Pendiente — ya no es programar, son decisiones**: contratar la API de WhatsApp (sin ella el "avisar N horas antes" no puede hacer nada), pasarela de pago para cobrar a las academias, importar alumnos desde Excel, y textos legales/RGPD (ya se tratan emails y teléfonos). | ⏳ |
 >
 > El motor de balance/refuerzos (déficit, nivel compatible, aviso WhatsApp, "Apuntar")
 > ya está implementado en `src/lib/balance.ts` y la pantalla de clase.
