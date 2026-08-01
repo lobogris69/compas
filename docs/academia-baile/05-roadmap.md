@@ -16,7 +16,8 @@
 > | **S** | **Seguridad**: RLS y Storage cerrados; login de alumno por enlace mágico; email y teléfono protegidos por permisos de columna + función con comprobación de equipo. | ✅ hecho |
 > | **7** | **Asistencia real** ("pasar lista"): quién vino de verdad, con `asistio` solo escribible por dueño/profesor. Base del histórico y de la predicción. | ✅ hecho |
 > | **8** | **Motor predictivo**: previsión de asistencia por alumno (histórico suavizado), semáforo que refleja cómo va a ACABAR la clase, y refuerzos ordenados por probabilidad con antispam de avisos. | ✅ hecho |
-> | **9** | **Pendiente conocido**: editar el perfil de la academia (hoy congelado desde el alta), envío automático de WhatsApp, bajas lógicas, exportar a CSV, y conectar el "avisar N horas antes" (sigue sin hacer nada). | ⏳ siguiente |
+> | **9** | **Editar la academia** (identidad, contacto, estilos, profesores; el slug no cambia para no romper QR) y **bajas lógicas** (dar de baja ya no destruye pagos ni historial; se puede readmitir). | ✅ hecho |
+> | **10** | **Pendiente conocido**: exportar a CSV, envío automático de WhatsApp (necesita API externa), conectar el "avisar N horas antes" (sigue sin hacer nada), facturación propia, importar alumnos desde Excel y textos legales/RGPD. | ⏳ siguiente |
 >
 > El motor de balance/refuerzos (déficit, nivel compatible, aviso WhatsApp, "Apuntar")
 > ya está implementado en `src/lib/balance.ts` y la pantalla de clase.
