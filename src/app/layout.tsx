@@ -8,7 +8,7 @@ import { AvisoGuardado } from "@/components/aviso-guardado";
 export const metadata: Metadata = {
   title: "Compás — cuadra tus clases de baile",
   description:
-    "La app para academias de baile que equilibra leaders y followers en cada clase y llama a refuerzos automáticamente.",
+    "La app para academias de baile en pareja que ve venir las clases descompensadas de leaders y followers, y te dice a quién avisar para cuadrarlas.",
 };
 
 export const viewport: Viewport = {
