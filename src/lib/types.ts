@@ -43,6 +43,9 @@ export interface Academia {
   telefono: string;
   /** Plantilla del mensaje de recordatorio de pago (admite {nombre} y {academia}). */
   recordatorioPago: string;
+  /** Datos de cobro que se enseñan a quien reserva un taller. */
+  bizum: string;
+  iban: string;
   /** Logo (dataURL en local, URL/Storage en nube). Si falta, se usa el emoji. */
   logoUrl: string | null;
   profesores: Profesor[];
@@ -151,6 +154,50 @@ export interface Pago {
   cubreHasta: string | null;
   clases: number | null; // solo bonos
   createdAt: string;
+}
+
+/** Taller o evento puntual que la academia publica para que se reserve. */
+export interface Taller {
+  id: string;
+  academiaId: string;
+  nombre: string;
+  descripcion: string;
+  /** null mientras no haya fecha cerrada. */
+  fecha: string | null;
+  hora: string;
+  duracionMin: number | null;
+  importe: number;
+  /** null = sin límite de plazas. */
+  plazas: number | null;
+  cartelUrl: string | null;
+  activo: boolean;
+  createdAt: string;
+}
+
+export type MetodoPago = "bizum" | "transferencia" | "efectivo";
+export type EstadoReserva = "pendiente" | "confirmada" | "cancelada";
+
+/** Reserva de una persona para un taller (no hace falta que sea alumna). */
+export interface Reserva {
+  id: string;
+  academiaId: string;
+  tallerId: string;
+  nombre: string;
+  email: string;
+  telefono: string;
+  /** Rol con el que viene: permite ver el equilibrio del taller. */
+  rol: Rol;
+  metodoPago: MetodoPago;
+  estado: EstadoReserva;
+  notas: string;
+  createdAt: string;
+}
+
+/** Ocupación de un taller sin destapar quién ha reservado. */
+export interface PlazasTaller {
+  reservadas: number;
+  leaders: number;
+  followers: number;
 }
 
 /** Registro de que se avisó a un alumno para reforzar una sesión. */

@@ -17,7 +17,10 @@ import type {
   Miembro,
   Pago,
   PlanPago,
+  PlazasTaller,
   ReglasBalance,
+  Reserva,
+  Taller,
   Video,
 } from "./types";
 
@@ -60,6 +63,8 @@ function academiaFromRow(r: Record<string, unknown>): Academia {
     ubicacion: (r.ubicacion as string) ?? "",
     telefono: (r.telefono as string) ?? "",
     recordatorioPago: (r.recordatorio_pago as string) ?? "",
+    bizum: (r.bizum as string) ?? "",
+    iban: (r.iban as string) ?? "",
     logoUrl: (r.logo_url as string | null) ?? null,
     profesores: (r.profesores as Academia["profesores"]) ?? [],
     ownerId: (r.owner as string | null) ?? null,
@@ -159,6 +164,8 @@ export async function crearAcademia(
       ubicacion: a.ubicacion,
       telefono: a.telefono,
       recordatorio_pago: a.recordatorioPago,
+      bizum: a.bizum,
+      iban: a.iban,
       logo_url: a.logoUrl,
       profesores: a.profesores,
       owner: ownerId,
@@ -198,6 +205,8 @@ export async function actualizarPerfilAcademia(
   if (patch.telefono !== undefined) row.telefono = patch.telefono;
   if (patch.logoUrl !== undefined) row.logo_url = patch.logoUrl;
   if (patch.profesores !== undefined) row.profesores = patch.profesores;
+  if (patch.bizum !== undefined) row.bizum = patch.bizum;
+  if (patch.iban !== undefined) row.iban = patch.iban;
   if (Object.keys(row).length === 0) return;
   const { data, error } = await db()
     .from("academias")
@@ -727,6 +736,152 @@ export async function marcarAsistencia(
     vino,
   });
   if (error) throw error;
+}
+
+// ───────────────────────── Talleres y reservas ─────────────────────────
+
+function tallerFromRow(r: Record<string, unknown>): Taller {
+  return {
+    id: r.id as string,
+    academiaId: r.academia_id as string,
+    nombre: r.nombre as string,
+    descripcion: (r.descripcion as string) ?? "",
+    fecha: (r.fecha as string | null) ?? null,
+    hora: (r.hora as string) ?? "",
+    duracionMin: (r.duracion_min as number | null) ?? null,
+    importe: Number(r.importe ?? 0),
+    plazas: (r.plazas as number | null) ?? null,
+    cartelUrl: (r.cartel_url as string | null) ?? null,
+    activo: (r.activo as boolean) ?? true,
+    createdAt: r.created_at as string,
+  };
+}
+
+export async function talleresDe(academiaId: string): Promise<Taller[]> {
+  const { data, error } = await db()
+    .from("talleres")
+    .select("*")
+    .eq("academia_id", academiaId)
+    .order("fecha", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(tallerFromRow);
+}
+
+function tallerToRow(t: Taller) {
+  return {
+    nombre: t.nombre,
+    descripcion: t.descripcion,
+    fecha: t.fecha,
+    hora: t.hora,
+    duracion_min: t.duracionMin,
+    importe: t.importe,
+    plazas: t.plazas,
+    cartel_url: t.cartelUrl,
+    activo: t.activo,
+  };
+}
+
+export async function crearTaller(t: Taller): Promise<void> {
+  const { error } = await db()
+    .from("talleres")
+    .insert({ id: t.id, academia_id: t.academiaId, ...tallerToRow(t) });
+  if (error) throw error;
+}
+
+export async function actualizarTaller(t: Taller): Promise<void> {
+  const { data, error } = await db()
+    .from("talleres")
+    .update(tallerToRow(t))
+    .eq("id", t.id)
+    .select("id");
+  if (error) throw error;
+  exigirFilas(data, "guardar el taller");
+}
+
+export async function eliminarTaller(id: string): Promise<void> {
+  const { data, error } = await db()
+    .from("talleres")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+  exigirFilas(data, "borrar el taller");
+}
+
+function reservaFromRow(r: Record<string, unknown>): Reserva {
+  return {
+    id: r.id as string,
+    academiaId: r.academia_id as string,
+    tallerId: r.taller_id as string,
+    nombre: r.nombre as string,
+    email: (r.email as string) ?? "",
+    telefono: (r.telefono as string) ?? "",
+    rol: r.rol as Reserva["rol"],
+    metodoPago: r.metodo_pago as Reserva["metodoPago"],
+    estado: r.estado as Reserva["estado"],
+    notas: (r.notas as string) ?? "",
+    createdAt: r.created_at as string,
+  };
+}
+
+/** Solo devuelve algo al equipo de la academia (RLS); para el resto, vacío. */
+export async function reservasDe(academiaId: string): Promise<Reserva[]> {
+  const { data, error } = await db()
+    .from("reservas")
+    .select("*")
+    .eq("academia_id", academiaId)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []).map(reservaFromRow);
+}
+
+/**
+ * Crear reserva. No pedimos la fila de vuelta a propósito: quien reserva es
+ * anónimo y no tiene permiso para leer reservas (llevan datos personales).
+ */
+export async function crearReserva(r: Reserva): Promise<void> {
+  const { error } = await db().from("reservas").insert({
+    id: r.id,
+    academia_id: r.academiaId,
+    taller_id: r.tallerId,
+    nombre: r.nombre,
+    email: r.email,
+    telefono: r.telefono,
+    rol: r.rol,
+    metodo_pago: r.metodoPago,
+    estado: r.estado,
+    notas: r.notas,
+  });
+  if (error) throw error;
+}
+
+export async function actualizarReserva(
+  id: string,
+  patch: Partial<Reserva>,
+): Promise<void> {
+  const row: Record<string, unknown> = {};
+  if (patch.estado !== undefined) row.estado = patch.estado;
+  if (patch.notas !== undefined) row.notas = patch.notas;
+  if (Object.keys(row).length === 0) return;
+  const { data, error } = await db()
+    .from("reservas")
+    .update(row)
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+  exigirFilas(data, "actualizar la reserva");
+}
+
+/** Ocupación de un taller (número y reparto de roles), sin nombres. */
+export async function plazasDe(tallerId: string): Promise<PlazasTaller> {
+  const { data, error } = await db().rpc("plazas_taller", { tid: tallerId });
+  if (error) throw error;
+  const f = (data as PlazasTaller[] | null)?.[0];
+  return {
+    reservadas: f?.reservadas ?? 0,
+    leaders: f?.leaders ?? 0,
+    followers: f?.followers ?? 0,
+  };
 }
 
 // ───────────────────────── Avisos de refuerzo ─────────────────────────

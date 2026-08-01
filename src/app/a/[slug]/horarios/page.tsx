@@ -121,8 +121,11 @@ export default function Horarios() {
         )}
       </div>
 
-      <div className="mt-8 text-center">
+      <div className="mt-8 flex flex-wrap justify-center gap-2">
         <LinkButton href={`/a/${slug}/unirse`}>Apuntarme a la academia</LinkButton>
+        <LinkButton href={`/a/${slug}/talleres`} variant="secondary">
+          🎫 Ver talleres
+        </LinkButton>
       </div>
     </main>
   );

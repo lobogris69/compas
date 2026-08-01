@@ -12,7 +12,7 @@
 > | **3** | **Acceso de profesores**: el dueño invita por email; vista reducida (subir vídeos + ver estado). | ✅ hecho |
 > | **4** | **`/admin` de plataforma** (email del fundador): todas las academias y sus números. | ✅ hecho (solo lectura; suspender/borrar pendiente) |
 > | **5** | **Pagos**: planes configurables (mensual/trimestral/semestral/anual/bono) + control al día/pendiente + recordatorios WhatsApp manuales. | ✅ hecho (envío automático programado: pendiente, necesita API WhatsApp) |
-> | **6** | **Reservas de clases y talleres** (idea). | ⏳ propuesto |
+> | **6** | **Talleres y reservas**: la academia publica talleres con cartel, fecha, duración, importe y plazas; cualquiera reserva sin cuenta indicando su ROL, y ve el Bizum/IBAN para pagar. La academia gestiona las reservas y ve el equilibrio leader/follower del taller. | ✅ hecho |
 > | **S** | **Seguridad**: RLS y Storage cerrados; login de alumno por enlace mágico; email y teléfono protegidos por permisos de columna + función con comprobación de equipo. | ✅ hecho |
 > | **7** | **Asistencia real** ("pasar lista"): quién vino de verdad, con `asistio` solo escribible por dueño/profesor. Base del histórico y de la predicción. | ✅ hecho |
 > | **8** | **Motor predictivo**: previsión de asistencia por alumno (histórico suavizado), semáforo que refleja cómo va a ACABAR la clase, y refuerzos ordenados por probabilidad con antispam de avisos. | ✅ hecho |

@@ -23,6 +23,8 @@ export function EditarAcademia({ academia }: { academia: Academia }) {
   const [estiloNuevo, setEstiloNuevo] = useState("");
   const [profesores, setProfesores] = useState<Profesor[]>(academia.profesores);
   const [logoUrl, setLogoUrl] = useState(academia.logoUrl);
+  const [bizum, setBizum] = useState(academia.bizum);
+  const [iban, setIban] = useState(academia.iban);
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
   const [error, setError] = useState("");
@@ -78,6 +80,8 @@ export function EditarAcademia({ academia }: { academia: Academia }) {
       logoUrl,
       ubicacion: ubicacion.trim(),
       telefono: telefono.trim(),
+      bizum: bizum.trim(),
+      iban: iban.trim(),
       estilos: estilos.length ? estilos : ["Salsa"],
       profesores: profesores
         .filter((p) => p.nombre.trim())
@@ -167,6 +171,27 @@ export function EditarAcademia({ academia }: { academia: Academia }) {
               setGuardado(false);
             }}
             placeholder="600 123 456"
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input
+            label="Bizum (para cobrar talleres)"
+            value={bizum}
+            onChange={(e) => {
+              setBizum(e.target.value);
+              setGuardado(false);
+            }}
+            placeholder="600 123 456"
+          />
+          <Input
+            label="IBAN (transferencias)"
+            value={iban}
+            onChange={(e) => {
+              setIban(e.target.value);
+              setGuardado(false);
+            }}
+            placeholder="ES00 0000 0000 0000 0000 0000"
           />
         </div>
 

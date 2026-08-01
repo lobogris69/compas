@@ -110,6 +110,9 @@ export default function PanelAcademia() {
           )}
         </div>
         <div className="ml-auto flex gap-2">
+          <LinkButton href={`/a/${slug}/talleres`} variant="secondary">
+            🎫 Talleres
+          </LinkButton>
           <LinkButton href={`/a/${slug}/videos`} variant="secondary">
             🎬 Vídeos
           </LinkButton>

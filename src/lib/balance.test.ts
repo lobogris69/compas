@@ -107,6 +107,8 @@ describe("sugerirRefuerzos", () => {
     ubicacion: "",
     telefono: "",
     recordatorioPago: "",
+    bizum: "",
+    iban: "",
     logoUrl: null,
     profesores: [],
     createdAt: "2026-01-01",

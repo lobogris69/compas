@@ -138,6 +138,8 @@ export default function NuevaAcademia() {
       ubicacion: ubicacion.trim(),
       telefono: telefono.trim(),
       recordatorioPago: "",
+      bizum: "",
+      iban: "",
       estilos: estilosFinal,
       profesores: profesores
         .filter((p) => p.nombre.trim())

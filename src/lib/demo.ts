@@ -8,6 +8,8 @@ import {
   type Asistencia,
   type Clase,
   type AvisoRefuerzo,
+  type Reserva,
+  type Taller,
   type Matricula,
   type Miembro,
   type Pago,
@@ -28,6 +30,8 @@ export interface DemoData {
   planes: PlanPago[];
   pagos: Pago[];
   avisos: AvisoRefuerzo[];
+  talleres: Taller[];
+  reservas: Reserva[];
 }
 
 const NOMBRES_LEADER = [
@@ -104,6 +108,8 @@ export function crearDemo(): DemoData {
     telefono: "600 123 456",
     recordatorioPago:
       "¡Hola {nombre}! 👋 Te recordamos que tienes el pago pendiente en {academia}. ¡Gracias! 🙏",
+    bizum: "600 123 456",
+    iban: "",
     logoUrl: null,
     profesores: [
       { nombre: "Lucía", estilos: ["Salsa", "Bachata"] },
@@ -273,5 +279,7 @@ export function crearDemo(): DemoData {
     planes,
     pagos: [],
     avisos: [],
+    talleres: [],
+    reservas: [],
   };
 }

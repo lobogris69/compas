@@ -29,7 +29,9 @@ import type {
   Miembro,
   Pago,
   PlanPago,
+  Reserva,
   Rol,
+  Taller,
   Video,
 } from "./types";
 
@@ -48,6 +50,8 @@ interface DB {
   planes: PlanPago[];
   pagos: Pago[];
   avisos: AvisoRefuerzo[];
+  talleres: Taller[];
+  reservas: Reserva[];
 }
 
 const VACIO: DB = {
@@ -61,6 +65,8 @@ const VACIO: DB = {
   planes: [],
   pagos: [],
   avisos: [],
+  talleres: [],
+  reservas: [],
 };
 
 /** Inserta/actualiza por id (para hidratar desde la nube sin duplicar). */
@@ -120,6 +126,16 @@ interface StoreValue {
   registrarPago: (p: Omit<Pago, "id" | "createdAt">) => Pago;
   eliminarPago: (id: string) => void;
   pagosDe: (academiaId: string) => Pago[];
+  // Talleres y reservas
+  crearTaller: (t: Omit<Taller, "id" | "createdAt">) => Taller;
+  actualizarTaller: (t: Taller) => void;
+  eliminarTaller: (id: string) => void;
+  talleresDe: (academiaId: string) => Taller[];
+  /** Reservar un taller (no hace falta cuenta). */
+  crearReserva: (r: Omit<Reserva, "id" | "createdAt">) => Reserva;
+  actualizarReserva: (id: string, patch: Partial<Reserva>) => void;
+  /** Reservas de la academia. Solo llegan si eres del equipo. */
+  reservasDe: (academiaId: string) => Reserva[];
   // Identidad ligera del alumno (modo local): qué alumno "soy" en cada academia
   yoEn: (academiaId: string) => string | null;
   identificarme: (academiaId: string, alumnoId: string) => void;
@@ -386,6 +402,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         planes: prev.planes.filter((p) => p.academiaId !== id),
         pagos: prev.pagos.filter((p) => p.academiaId !== id),
         avisos: prev.avisos.filter((a) => a.academiaId !== id),
+        talleres: prev.talleres.filter((t) => t.academiaId !== id),
+        reservas: prev.reservas.filter((r) => r.academiaId !== id),
       }));
       // Limpia propiedad e identidad ligera de esa academia.
       setOwned((prev) => {
@@ -780,6 +798,70 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
+  const crearTaller: StoreValue["crearTaller"] = useCallback(
+    (input) => {
+      const taller: Taller = {
+        ...input,
+        id: newId(),
+        createdAt: new Date().toISOString(),
+      };
+      update((prev) => ({ ...prev, talleres: [...prev.talleres, taller] }));
+      if (MODE === "supabase") encolar(() => remote.crearTaller(taller));
+      return taller;
+    },
+    [update, encolar],
+  );
+
+  const actualizarTaller: StoreValue["actualizarTaller"] = useCallback(
+    (taller) => {
+      update((prev) => ({
+        ...prev,
+        talleres: prev.talleres.map((t) => (t.id === taller.id ? taller : t)),
+      }));
+      if (MODE === "supabase") encolar(() => remote.actualizarTaller(taller));
+    },
+    [update, encolar],
+  );
+
+  const eliminarTaller: StoreValue["eliminarTaller"] = useCallback(
+    (id) => {
+      update((prev) => ({
+        ...prev,
+        talleres: prev.talleres.filter((t) => t.id !== id),
+        reservas: prev.reservas.filter((r) => r.tallerId !== id),
+      }));
+      if (MODE === "supabase") encolar(() => remote.eliminarTaller(id));
+    },
+    [update, encolar],
+  );
+
+  const crearReserva: StoreValue["crearReserva"] = useCallback(
+    (input) => {
+      const reserva: Reserva = {
+        ...input,
+        id: newId(),
+        createdAt: new Date().toISOString(),
+      };
+      update((prev) => ({ ...prev, reservas: [...prev.reservas, reserva] }));
+      if (MODE === "supabase") encolar(() => remote.crearReserva(reserva));
+      return reserva;
+    },
+    [update, encolar],
+  );
+
+  const actualizarReserva: StoreValue["actualizarReserva"] = useCallback(
+    (id, patch) => {
+      update((prev) => ({
+        ...prev,
+        reservas: prev.reservas.map((r) =>
+          r.id === id ? { ...r, ...patch } : r,
+        ),
+      }));
+      if (MODE === "supabase") encolar(() => remote.actualizarReserva(id, patch));
+    },
+    [update, encolar],
+  );
+
   const registrarAviso: StoreValue["registrarAviso"] = useCallback(
     (academiaId, claseId, alumnoId, fecha) => {
       const aviso: AvisoRefuerzo = {
@@ -858,6 +940,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             planes,
             pagos,
             avisos,
+            talleres,
+            reservas,
           ] = await Promise.all([
             remote.alumnosDe(ac.id),
             remote.clasesDe(ac.id),
@@ -868,6 +952,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             remote.planesDe(ac.id),
             remote.pagosDe(ac.id),
             remote.avisosDe(ac.id),
+            remote.talleresDe(ac.id),
+            remote.reservasDe(ac.id),
           ]);
           setDb((prev) => ({
             academias: upsertById(prev.academias, [ac]),
@@ -888,6 +974,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             planes: reemplazarPorAcademia(prev.planes, ac.id, planes),
             pagos: reemplazarPorAcademia(prev.pagos, ac.id, pagos),
             avisos: reemplazarPorAcademia(prev.avisos, ac.id, avisos),
+            talleres: reemplazarPorAcademia(prev.talleres, ac.id, talleres),
+            reservas: reemplazarPorAcademia(prev.reservas, ac.id, reservas),
           }));
           if (ac.ownerId && auth.user && ac.ownerId === auth.user.id) {
             setOwned((prev) =>
@@ -993,6 +1081,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           (a) => a.claseId === claseId && a.fecha === fecha,
         ),
       marcarAsistencia,
+      crearTaller,
+      actualizarTaller,
+      eliminarTaller,
+      talleresDe: (academiaId) =>
+        db.talleres.filter((t) => t.academiaId === academiaId),
+      crearReserva,
+      actualizarReserva,
+      reservasDe: (academiaId) =>
+        db.reservas.filter((r) => r.academiaId === academiaId),
       registrarAviso,
       avisosRecientesDe: (alumnoId) => {
         // Últimos 21 días: suficiente para repartir sin olvidar del todo.
@@ -1045,6 +1142,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       desmatricular,
       marcarAsistencia,
       registrarAviso,
+      crearTaller,
+      actualizarTaller,
+      eliminarTaller,
+      crearReserva,
+      actualizarReserva,
       cargarTelefonos,
       invitarMiembro,
       quitarMiembro,
