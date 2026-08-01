@@ -179,6 +179,34 @@ export async function actualizarReglas(
   exigirFilas(data, "guardar las reglas de la academia");
 }
 
+/**
+ * Actualiza los datos de la academia (identidad, contacto, estilos, profesores).
+ * El `slug` NO se toca a propósito: es la dirección pública que la academia ya ha
+ * repartido en carteles y QR, y cambiarlo rompería todos esos enlaces.
+ */
+export async function actualizarPerfilAcademia(
+  academiaId: string,
+  patch: Partial<Academia>,
+): Promise<void> {
+  const row: Record<string, unknown> = {};
+  if (patch.nombre !== undefined) row.nombre = patch.nombre;
+  if (patch.emoji !== undefined) row.emoji = patch.emoji;
+  if (patch.color !== undefined) row.color = patch.color;
+  if (patch.estilos !== undefined) row.estilos = patch.estilos;
+  if (patch.ubicacion !== undefined) row.ubicacion = patch.ubicacion;
+  if (patch.telefono !== undefined) row.telefono = patch.telefono;
+  if (patch.logoUrl !== undefined) row.logo_url = patch.logoUrl;
+  if (patch.profesores !== undefined) row.profesores = patch.profesores;
+  if (Object.keys(row).length === 0) return;
+  const { data, error } = await db()
+    .from("academias")
+    .update(row)
+    .eq("id", academiaId)
+    .select("id");
+  if (error) throw error;
+  exigirFilas(data, "guardar los datos de la academia");
+}
+
 export async function actualizarRecordatorio(
   academiaId: string,
   texto: string,

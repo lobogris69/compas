@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Button, Card, Input, Select } from "@/components/ui";
+import { EditarAcademia } from "@/components/editar-academia";
 import {
   DIAS_SEMANA,
   NIVELES,
@@ -189,6 +190,8 @@ export default function Config() {
         ← {academia.nombre}
       </Link>
       <h1 className="mt-2 text-2xl font-extrabold">Configuración</h1>
+
+      <EditarAcademia academia={academia} />
 
       <Card className="mt-5">
         <h2 className="font-bold">Reglas de balance</h2>

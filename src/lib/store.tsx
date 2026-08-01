@@ -349,6 +349,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (MODE === "supabase" && patch.recordatorioPago !== undefined) {
         encolar(() => remote.actualizarRecordatorio(id, patch.recordatorioPago!));
       }
+      // Identidad, contacto, estilos y profesores. Antes no se persistían: se
+      // fijaban en el alta y quedaban congelados para siempre, justo los datos
+      // que se publican en la página pública de horarios.
+      const perfil: Partial<Academia> = {};
+      if (patch.nombre !== undefined) perfil.nombre = patch.nombre;
+      if (patch.emoji !== undefined) perfil.emoji = patch.emoji;
+      if (patch.color !== undefined) perfil.color = patch.color;
+      if (patch.estilos !== undefined) perfil.estilos = patch.estilos;
+      if (patch.ubicacion !== undefined) perfil.ubicacion = patch.ubicacion;
+      if (patch.telefono !== undefined) perfil.telefono = patch.telefono;
+      if (patch.logoUrl !== undefined) perfil.logoUrl = patch.logoUrl;
+      if (patch.profesores !== undefined) perfil.profesores = patch.profesores;
+      if (MODE === "supabase" && Object.keys(perfil).length > 0) {
+        encolar(() => remote.actualizarPerfilAcademia(id, perfil));
+      }
     },
     [update, encolar],
   );
