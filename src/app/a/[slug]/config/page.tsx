@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { EditarAcademia } from "@/components/editar-academia";
+import { ExportarDatos } from "@/components/exportar-datos";
 import {
   DIAS_SEMANA,
   NIVELES,
@@ -458,6 +459,8 @@ export default function Config() {
           El profe debe registrarse en Compás con ese mismo email para acceder.
         </p>
       </Card>
+
+      <ExportarDatos academia={academia} />
 
       <Card className="mt-5">
         <h2 className="font-bold">Planes de pago ({planes.length})</h2>

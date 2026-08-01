@@ -290,6 +290,28 @@ export async function telefonosDe(
 }
 
 /**
+ * Email y teléfono de los alumnos, para exportar. Solo devuelve algo al dueño o
+ * a un profesor (lo comprueba la función en la base de datos).
+ */
+export async function contactoDe(
+  academiaId: string,
+): Promise<Record<string, { email: string; telefono: string }>> {
+  const { data, error } = await db().rpc("contacto_academia", {
+    aid: academiaId,
+  });
+  if (error) throw error;
+  const out: Record<string, { email: string; telefono: string }> = {};
+  for (const f of (data ?? []) as {
+    alumno_id: string;
+    email: string | null;
+    telefono: string | null;
+  }[]) {
+    out[f.alumno_id] = { email: f.email ?? "", telefono: f.telefono ?? "" };
+  }
+  return out;
+}
+
+/**
  * Vincula la ficha de alumno con la cuenta que acaba de entrar (reclamarla).
  * Solo funciona si el email de la ficha coincide con el de la sesión y la ficha
  * no tiene dueño todavía (política `alumnos_reclamar`). Devuelve el id del
