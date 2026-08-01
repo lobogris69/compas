@@ -88,6 +88,7 @@ function alumnoFromRow(r: Record<string, unknown>): Alumno {
     telefono: (r.telefono as string) ?? "",
     email: (r.email as string) ?? "",
     userId: (r.user_id as string | null) ?? null,
+    bajaAt: (r.baja_at as string | null) ?? null,
     estilos: (r.estilos as string[]) ?? [],
     fotoUrl: (r.foto_url as string | null) ?? null,
     bio: (r.bio as string) ?? "",
@@ -227,7 +228,7 @@ export async function actualizarRecordatorio(
 // (0011 y 0012). El email solo se usa en servidor para vincular la ficha; los
 // teléfonos se piden aparte con `telefonosDe`, que comprueba que eres del equipo.
 const COLS_ALUMNO =
-  "id,academia_id,user_id,nombre,rol,nivel,sexo,estilos,foto_url,bio,bailando_desde,instagram,visibilidad,created_at";
+  "id,academia_id,user_id,nombre,rol,nivel,sexo,estilos,foto_url,bio,bailando_desde,instagram,visibilidad,baja_at,created_at";
 
 export async function alumnosDe(academiaId: string): Promise<Alumno[]> {
   const { data, error } = await db()
@@ -379,14 +380,18 @@ export async function asistenciasDe(
   return (data ?? []).map(asistenciaFromRow);
 }
 
-export async function eliminarAlumno(id: string): Promise<void> {
+/**
+ * Baja lógica: marca la fecha, no borra. Antes se hacía DELETE y la cascada se
+ * llevaba por delante sus pagos, su historial de asistencia y sus matrículas.
+ */
+export async function darDeBaja(id: string, baja: boolean): Promise<void> {
   const { data, error } = await db()
     .from("alumnos")
-    .delete()
+    .update({ baja_at: baja ? new Date().toISOString() : null })
     .eq("id", id)
     .select("id");
   if (error) throw error;
-  exigirFilas(data, "dar de baja al alumno");
+  exigirFilas(data, baja ? "dar de baja al alumno" : "readmitir al alumno");
 }
 
 // Borra la academia. La BD elimina en cascada clases, alumnos, asistencias y

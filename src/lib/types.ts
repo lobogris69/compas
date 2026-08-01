@@ -64,6 +64,8 @@ export interface Alumno {
   email: string;
   /** Usuario de Supabase vinculado, cuando ha reclamado su ficha. */
   userId: string | null;
+  /** Fecha de baja. Si tiene valor, ya no está activo (pero se conserva todo). */
+  bajaAt: string | null;
   estilos: string[];
   // Perfil opcional (opt-in, privacidad primero).
   fotoUrl: string | null;

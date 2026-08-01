@@ -126,8 +126,12 @@ interface StoreValue {
   // Alumnos
   crearAlumno: (a: Omit<Alumno, "id" | "createdAt">) => Alumno;
   actualizarAlumno: (id: string, patch: Partial<Alumno>) => void;
-  eliminarAlumno: (id: string) => void; // dar de baja
+  /** Baja lógica: deja de contar, pero conserva pagos e historial. */
+  darDeBaja: (id: string, baja?: boolean) => void;
+  /** Alumnos activos de la academia (sin los dados de baja). */
   alumnosDe: (academiaId: string) => Alumno[];
+  /** Incluye también a los dados de baja (para poder readmitirlos). */
+  alumnosDeConBajas: (academiaId: string) => Alumno[];
   // Vídeos
   crearVideo: (v: Omit<Video, "id" | "createdAt">) => Video;
   actualizarVideo: (id: string, patch: Partial<Video>) => void;
@@ -482,18 +486,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
-  const eliminarAlumno: StoreValue["eliminarAlumno"] = useCallback(
-    (id) => {
+  const darDeBaja: StoreValue["darDeBaja"] = useCallback(
+    (id, baja = true) => {
+      // Baja LÓGICA: no se borra nada. Antes se eliminaba la fila y la cascada
+      // se llevaba por delante sus pagos (la contabilidad de la academia) y su
+      // historial de asistencia (lo que alimenta la predicción).
+      const bajaAt = baja ? new Date().toISOString() : null;
       update((prev) => ({
         ...prev,
-        alumnos: prev.alumnos.filter((a) => a.id !== id),
-        // limpia sus respuestas de asistencia y sus matrículas
-        asistencias: prev.asistencias.filter((a) => a.alumnoId !== id),
-        matriculas: prev.matriculas.filter((m) => m.alumnoId !== id),
+        alumnos: prev.alumnos.map((a) => (a.id === id ? { ...a, bajaAt } : a)),
       }));
-      if (MODE === "supabase") encolar(() => remote.eliminarAlumno(id));
+      if (MODE === "supabase") encolar(() => remote.darDeBaja(id, baja));
     },
-    [update],
+    [update, encolar],
   );
 
   const crearVideo: StoreValue["crearVideo"] = useCallback(
@@ -947,8 +952,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       identificarme,
       crearAlumno,
       actualizarAlumno,
-      eliminarAlumno,
+      darDeBaja,
       alumnosDe: (academiaId) =>
+        db.alumnos.filter((a) => a.academiaId === academiaId && !a.bajaAt),
+      alumnosDeConBajas: (academiaId) =>
         db.alumnos.filter((a) => a.academiaId === academiaId),
       crearVideo,
       actualizarVideo,
@@ -1027,7 +1034,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       identificarme,
       crearAlumno,
       actualizarAlumno,
-      eliminarAlumno,
+      darDeBaja,
       crearVideo,
       actualizarVideo,
       eliminarVideo,

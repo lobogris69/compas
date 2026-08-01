@@ -123,6 +123,7 @@ describe("sugerirRefuerzos", () => {
       telefono: "",
       email: "",
       userId: null,
+      bajaAt: null,
       estilos: ["Salsa"],
       fotoUrl: null,
       bio: "",

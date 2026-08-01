@@ -14,6 +14,17 @@ export default function Comunidad() {
   const academia = store.academiaPorSlug(slug);
   const esDueno = academia ? store.soyDueno(academia.id) : false;
   const [filtro, setFiltro] = useState<Rol | "todos">("todos");
+  const [verBajas, setVerBajas] = useState(false);
+
+  // Los dados de baja no aparecen en la comunidad ni cuentan en el balance,
+  // pero se conservan (con sus pagos e historial) y se pueden readmitir.
+  const bajas = useMemo(() => {
+    if (!academia || !esDueno) return [];
+    return store
+      .alumnosDeConBajas(academia.id)
+      .filter((a) => a.bajaAt)
+      .sort((a, b) => (b.bajaAt ?? "").localeCompare(a.bajaAt ?? ""));
+  }, [academia, esDueno, store]);
 
   const visibles = useMemo(() => {
     if (!academia) return [];
@@ -99,10 +110,10 @@ export default function Comunidad() {
                   onClick={() => {
                     if (
                       confirm(
-                        `¿Dar de baja a ${a.nombre}? Se eliminará de la academia.`,
+                        `¿Dar de baja a ${a.nombre}? Dejará de aparecer y de contar en el balance. Sus pagos y su historial se conservan, y puedes readmitirle luego.`,
                       )
                     )
-                      store.eliminarAlumno(a.id);
+                      store.darDeBaja(a.id);
                   }}
                   className="mt-2 rounded-lg px-2 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"
                 >
@@ -120,6 +131,45 @@ export default function Comunidad() {
           </Card>
         )}
       </div>
+
+      {esDueno && bajas.length > 0 && (
+        <section className="mt-8">
+          <button
+            onClick={() => setVerBajas((v) => !v)}
+            className="text-sm font-semibold text-ink-500 hover:text-brand-600"
+          >
+            {verBajas ? "▾" : "▸"} Alumnos dados de baja ({bajas.length})
+          </button>
+          {verBajas && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-ink-500">
+                No cuentan en el balance ni salen en la comunidad, pero sus
+                pagos y su historial siguen guardados.
+              </p>
+              {bajas.map((a) => (
+                <Card
+                  key={a.id}
+                  className="flex items-center gap-3 py-3 opacity-75"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{a.nombre}</p>
+                    <p className="text-xs text-ink-500">
+                      baja el {(a.bajaAt ?? "").slice(0, 10)}
+                    </p>
+                  </div>
+                  <RolBadge rol={a.rol} />
+                  <button
+                    onClick={() => store.darDeBaja(a.id, false)}
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                  >
+                    Readmitir
+                  </button>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </main>
   );
 }

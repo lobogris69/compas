@@ -67,6 +67,7 @@ export default function Unirse() {
       telefono: telefono.trim(),
       email: email.trim().toLowerCase(),
       userId: null,
+      bajaAt: null,
       estilos: academia.estilos,
       fotoUrl: null,
       bio: bio.trim(),

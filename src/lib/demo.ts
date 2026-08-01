@@ -70,6 +70,7 @@ function alumno(
     telefono: "",
     email: "",
     userId: null,
+    bajaAt: null,
     estilos: ["Salsa", "Bachata"],
     fotoUrl: null,
     bio: "",
